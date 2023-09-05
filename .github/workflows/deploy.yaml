@@ -25,15 +25,23 @@ jobs:
           workload_identity_provider: "projects/890199201495/locations/global/workloadIdentityPools/github-actions/providers/github"
           service_account: "gha-account@ureuzy-org-system.iam.gserviceaccount.com"
 
-      - name: Deploy Cloud Functions
-        id: deploy
-        uses: "google-github-actions/deploy-cloud-functions@v1"
-        with:
-          name: "audit-alert"
-          runtime: "go120"
-          entry_point: "Main"
-          region: "asia-northeast1"
-          source_dir: "audit-alert"
-          ingress_settings: "ALLOW_ALL"
-          env_vars_file: "./audit-alert/env.yaml"
-          secret_environment_variables: "SLACK_WEBHOOK=projects/ureuzy-org-system/secrets/slack_webhook"
+      - name: Set up Cloud SDK
+        uses: 'google-github-actions/setup-gcloud@v1'
+
+      - name: Use gcloud CLI
+        run: 'gcloud info'
+
+      - name: Use to deploy a cloud function gen 2
+        run: >
+          gcloud functions deploy audit-alert
+          --gen2
+          --trigger-http
+          --runtime="go120" 
+          --region="asia-northeast1" 
+          --source="audit-alert"
+          --entry-point="Main"
+          --memory="128Mi"
+          --timeout="60s"
+          --env-vars-file="./audit-alert/env.yaml"
+          --ingress-settings="all"
+          --set-secrets="SLACK_WEBHOOK=projects/ureuzy-org-system/secrets/slack_webhook:latest"
