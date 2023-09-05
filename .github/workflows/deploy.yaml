@@ -1,0 +1,39 @@
+name: Deploy audit alert
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-functions:
+    name: Deploy audit alert in org aggregation logs
+    runs-on: ubuntu-20.04
+
+    permissions:
+      contents: "read"
+      id-token: "write"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: "projects/890199201495/locations/global/workloadIdentityPools/github-actions/providers/github"
+          service_account: "gha-account@ureuzy-org-system.iam.gserviceaccount.com"
+
+      - name: Deploy Cloud Functions
+        id: deploy
+        uses: "google-github-actions/deploy-cloud-functions@v1"
+        with:
+          name: "audit-alert"
+          runtime: "go120"
+          entry_point: "Main"
+          region: "asia-northeast1"
+          source_dir: "audit-alert"
+          ingress_settings: "ALLOW_ALL"
+          env_vars_file: "./audit-alert/env.yaml"
+          secret_environment_variables: "SLACK_WEBHOOK=projects/ureuzy-org-system/secrets/slack_webhook"
