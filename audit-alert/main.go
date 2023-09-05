@@ -53,7 +53,7 @@ func main(ctx context.Context, e event.Event) error {
 		AddField(slack.Field{Title: "ResourceName", Value: data.ProtoPayload.ResourceName})
 	payload := slack.Payload{
 		Username:    "AuditLog",
-		Channel:     "#memo",
+		Channel:     os.Getenv("CHANNEL"),
 		Attachments: []slack.Attachment{attachment},
 	}
 	errs := slack.Send(webhookUrl, "", payload)
