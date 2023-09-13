@@ -42,3 +42,4 @@ jobs:
           --env-vars-file="./audit-alert/env.yaml"
           --ingress-settings="all"
           --set-secrets="SLACK_WEBHOOK=projects/ureuzy-org-system/secrets/slack_webhook:latest"
+          --service-account="audit-alert-functions@ureuzy-org-system.iam.gserviceaccount.com"
