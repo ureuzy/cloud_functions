@@ -7,6 +7,7 @@ require (
 	github.com/ashwanthkumar/slack-go-webhook v0.0.0-20200209025033-430dd4e66960
 	github.com/cloudevents/sdk-go/v2 v2.14.0
 	github.com/googleapis/google-cloudevents-go v0.7.0
+	github.com/kelseyhightower/envconfig v1.4.0
 	google.golang.org/protobuf v1.31.0
 )
 
