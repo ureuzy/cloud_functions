@@ -2,20 +2,20 @@ package auditalert
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"github.com/ureuzy/cloud_functions/audit-alert/config"
+	"log"
 	"net/url"
-	"os"
 	"path"
 	"strings"
 	"time"
 
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
-	"github.com/ashwanthkumar/slack-go-webhook"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/googleapis/google-cloudevents-go/cloud/auditdata"
+	"github.com/slack-go/slack"
 	"google.golang.org/protobuf/encoding/protojson"
+
+	"github.com/ureuzy/cloud_functions/audit-alert/config"
 )
 
 func init() {
@@ -82,16 +82,12 @@ func (l *LogEntry) getPrincipalEmail() string {
 func (l *LogEntry) getColor() string {
 	switch l.getPartialMethodName() {
 	case "InsertJob":
-		return "good"
+		return "#36a64f"
 	case "SetIamPolicy":
-		return "danger"
+		return "#d3381c"
 	default:
 		return ""
 	}
-}
-
-func toPtr(s string) *string {
-	return &s
 }
 
 func main(ctx context.Context, e event.Event) error {
@@ -111,26 +107,54 @@ func main(ctx context.Context, e event.Event) error {
 		return err
 	}
 
-	attachment := slack.Attachment{}
-	attachment.
-		AddField(slack.Field{Title: "TimeStamp", Value: t}).
-		AddField(slack.Field{Title: "PrincipalEmail", Value: logEntry.getPrincipalEmail()}).
-		AddField(slack.Field{Title: "MethodName", Value: logEntry.getPartialMethodName()}).
-		AddField(slack.Field{Title: "TargetProject", Value: logEntry.getTargetProject()}).
-		AddAction(slack.Action{
-			Text:  "ViewLog",
-			Url:   logEntry.buildSelfLink(conf.StorageScope, conf.Project),
-			Style: "",
-		})
-	attachment.Color = toPtr(logEntry.getColor())
-	payload := slack.Payload{
+	timestamp := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*TimeStamp*\n %s", t), false, false)
+	principalEmail := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*PrincipalEmail*\n %s", logEntry.getPrincipalEmail()), false, false)
+	methodName := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*MethodName*\n %s", logEntry.getPartialMethodName()), false, false)
+	targetProject := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*TargetProject*\n %s", logEntry.getTargetProject()), false, false)
+	viewLog := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("<%s|ViewLog>", logEntry.buildSelfLink(conf.StorageScope, conf.Project)), false, false)
+
+	fieldsSection := slack.NewSectionBlock(nil, []*slack.TextBlockObject{
+		timestamp,
+		principalEmail,
+		methodName,
+		targetProject,
+	}, nil)
+	linkSection := slack.NewSectionBlock(nil, []*slack.TextBlockObject{
+		viewLog,
+	}, nil)
+
+	blocks := slack.NewBlockMessage(fieldsSection, slack.NewDividerBlock(), linkSection).Blocks
+	attachment := slack.Attachment{
+		Color:  logEntry.getColor(),
+		Blocks: blocks,
+	}
+
+	err = slack.PostWebhook(conf.SlackWebhookUrl, &slack.WebhookMessage{
 		Username:    "AuditLog",
-		Channel:     os.Getenv("CHANNEL"),
+		Channel:     conf.Channel,
 		Attachments: []slack.Attachment{attachment},
+	})
+	if err != nil {
+		log.Println(err)
+		return err
 	}
-	errs := slack.Send(conf.SlackWebhookUrl, "", payload)
-	if len(errs) > 0 {
-		return errors.New(fmt.Sprintf("error: %s\n", errs))
-	}
+
+	//attachment := slack.Attachment{}
+	//attachment.
+	//	AddField(slack.Field{Title: "TimeStamp", Value: t}).
+	//	AddField(slack.Field{Title: "PrincipalEmail", Value: logEntry.getPrincipalEmail()}).
+	//	AddField(slack.Field{Title: "MethodName", Value: logEntry.getPartialMethodName()}).
+	//	AddField(slack.Field{Title: "TargetProject", Value: logEntry.getTargetProject()}).
+	//	AddField(slack.Field{Title: "ViewLog", Value: logEntry.buildSelfLink(conf.StorageScope, conf.Project)})
+	//attachment.Color = toPtr(logEntry.getColor())
+	//payload := slack.Payload{
+	//	Username:    "AuditLog",
+	//	Channel:     os.Getenv("CHANNEL"),
+	//	Attachments: []slack.Attachment{attachment},
+	//}
+	//errs := slack.Send(conf.SlackWebhookUrl, "", payload)
+	//if len(errs) > 0 {
+	//	return errors.New(fmt.Sprintf("error: %s\n", errs))
+	//}
 	return nil
 }
