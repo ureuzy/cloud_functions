@@ -138,23 +138,5 @@ func main(ctx context.Context, e event.Event) error {
 		log.Println(err)
 		return err
 	}
-
-	//attachment := slack.Attachment{}
-	//attachment.
-	//	AddField(slack.Field{Title: "TimeStamp", Value: t}).
-	//	AddField(slack.Field{Title: "PrincipalEmail", Value: logEntry.getPrincipalEmail()}).
-	//	AddField(slack.Field{Title: "MethodName", Value: logEntry.getPartialMethodName()}).
-	//	AddField(slack.Field{Title: "TargetProject", Value: logEntry.getTargetProject()}).
-	//	AddField(slack.Field{Title: "ViewLog", Value: logEntry.buildSelfLink(conf.StorageScope, conf.Project)})
-	//attachment.Color = toPtr(logEntry.getColor())
-	//payload := slack.Payload{
-	//	Username:    "AuditLog",
-	//	Channel:     os.Getenv("CHANNEL"),
-	//	Attachments: []slack.Attachment{attachment},
-	//}
-	//errs := slack.Send(conf.SlackWebhookUrl, "", payload)
-	//if len(errs) > 0 {
-	//	return errors.New(fmt.Sprintf("error: %s\n", errs))
-	//}
 	return nil
 }
