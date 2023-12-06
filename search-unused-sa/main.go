@@ -10,6 +10,7 @@ import (
 	"github.com/slack-go/slack"
 	"log"
 	"regexp"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/resourcemanager/apiv3"
@@ -182,13 +183,14 @@ func unMarshalActivity(activities []*policyanalyzer.GoogleCloudPolicyanalyzerV1A
 func toSlack(conf *config.Config, data []*ExtendPolicyanalyzerV1Activity) error {
 	var accounts string
 	for _, d := range data {
-		accounts += d.FullResourceName + "\n"
+		resourceName := strings.Split(d.FullResourceName, "/")
+		accounts += fmt.Sprintf("%s ~ : %s\n", d.ObservationPeriod.StartTime, resourceName[len(resourceName)-1])
 	}
 
-	block := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Unused service accounts*\n %s", accounts), false, false)
-	fieldsSection := slack.NewSectionBlock(nil, []*slack.TextBlockObject{block}, nil)
-	blocks := slack.NewBlockMessage(fieldsSection).Blocks
-	attachment := slack.Attachment{Blocks: blocks}
+	attachment := slack.Attachment{
+		Title: fmt.Sprintf("Unused service accounts (More than %d days after creation)", conf.DaysAfterCreation),
+		Text:  accounts,
+	}
 
 	if err := slack.PostWebhook(conf.SlackWebhookUrl, &slack.WebhookMessage{
 		Username:    "Activity Analyzer",
