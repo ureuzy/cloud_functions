@@ -3,7 +3,9 @@ package config
 import "github.com/kelseyhightower/envconfig"
 
 type Config struct {
-	DaysAfterCreation int `envconfig:"DAYS_AFTER_CREATION" default:"7"`
+	SlackWebhookUrl   string `envconfig:"SLACK_WEBHOOK" required:"true"`
+	Channel           string `envconfig:"CHANNEL" required:"true"`
+	DaysAfterCreation int    `envconfig:"DAYS_AFTER_CREATION" default:"7"`
 }
 
 func LoadConfig() (*Config, error) {

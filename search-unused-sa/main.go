@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"github.com/cloudevents/sdk-go/v2/event"
+	"github.com/slack-go/slack"
 	"log"
 	"regexp"
 	"time"
@@ -45,18 +46,6 @@ func (s *ExtendPolicyanalyzerV1Activity) daysAfterCreation(days int) bool {
 
 type ServiceAccountActivity struct {
 	Activities []*ExtendPolicyanalyzerV1Activity
-}
-
-func (s *ServiceAccountActivity) debugPrint() {
-	for _, activity := range s.Activities {
-		fmt.Printf("----%s----\n", activity.Activity.FullResourceName)
-		fmt.Printf("%s - %s\n", activity.Activity.ObservationPeriod.StartTime, activity.Activity.ObservationPeriod.EndTime)
-		if activity.UnMarshaledActivity.LastAuthenticatedTime == "" {
-			fmt.Println("Unused")
-		} else {
-			fmt.Printf("LastAuthenticatedTime: %s\n", activity.UnMarshaledActivity.LastAuthenticatedTime)
-		}
-	}
 }
 
 type UnMarshaledActivity struct {
@@ -126,6 +115,7 @@ func main(ctx context.Context, e event.Event) error {
 
 	req := &resourcemanagerpb.SearchProjectsRequest{}
 	it := c.SearchProjects(ctx, req)
+	var result []*ExtendPolicyanalyzerV1Activity
 	for {
 		resp, err := it.Next()
 		if errors.Is(err, iterator.Done) {
@@ -142,8 +132,9 @@ func main(ctx context.Context, e event.Event) error {
 			isUserCreatedSA(resp.ProjectId),
 			daysAfterCreation(conf.DaysAfterCreation),
 		})
-		filteredActivities.debugPrint()
+		result = append(result, filteredActivities.Activities...)
 	}
+	toSlack(conf, result)
 	return nil
 }
 
@@ -186,4 +177,25 @@ func unMarshalActivity(activities []*policyanalyzer.GoogleCloudPolicyanalyzerV1A
 		})
 	}
 	return result
+}
+
+func toSlack(conf *config.Config, data []*ExtendPolicyanalyzerV1Activity) error {
+	var accounts string
+	for _, d := range data {
+		accounts += d.FullResourceName + "\n"
+	}
+
+	block := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Accounts*\n %s", accounts), false, false)
+	fieldsSection := slack.NewSectionBlock(nil, []*slack.TextBlockObject{block}, nil)
+	blocks := slack.NewBlockMessage(fieldsSection).Blocks
+	attachment := slack.Attachment{Blocks: blocks}
+
+	if err := slack.PostWebhook(conf.SlackWebhookUrl, &slack.WebhookMessage{
+		Username:    "Service Account Activity Analyzer",
+		Channel:     conf.Channel,
+		Attachments: []slack.Attachment{attachment},
+	}); err != nil {
+		return err
+	}
+	return nil
 }
