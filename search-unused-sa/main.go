@@ -185,13 +185,13 @@ func toSlack(conf *config.Config, data []*ExtendPolicyanalyzerV1Activity) error 
 		accounts += d.FullResourceName + "\n"
 	}
 
-	block := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Accounts*\n %s", accounts), false, false)
+	block := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Unused service accounts*\n %s", accounts), false, false)
 	fieldsSection := slack.NewSectionBlock(nil, []*slack.TextBlockObject{block}, nil)
 	blocks := slack.NewBlockMessage(fieldsSection).Blocks
 	attachment := slack.Attachment{Blocks: blocks}
 
 	if err := slack.PostWebhook(conf.SlackWebhookUrl, &slack.WebhookMessage{
-		Username:    "Service Account Activity Analyzer",
+		Username:    "Activity Analyzer",
 		Channel:     conf.Channel,
 		Attachments: []slack.Attachment{attachment},
 	}); err != nil {
