@@ -138,12 +138,15 @@ func main(ctx context.Context, e event.Event) error {
 			log.Println(err)
 		}
 
+		fmt.Println("aaaaaa")
 		saActivities, err := saActivityAnalyze(policyanalyzerService, resp.ProjectId, "")
+		fmt.Println("bbbbbb")
 		filteredActivities := saActivities.Filter([]Option{
 			unUsedSA(),
 			isUserCreatedSA(resp.ProjectId),
 			sinceWasCreated(conf.DaysAfterCreation),
 		})
+		fmt.Println("cccccc")
 		filteredActivities.debugPrint()
 	}
 
