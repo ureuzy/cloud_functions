@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'audit-alert/**'
+      - '.github/workflows/deploy-audit-alert.yaml'
 
 jobs:
   deploy-functions:
