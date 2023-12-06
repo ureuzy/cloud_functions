@@ -45,4 +45,4 @@ jobs:
           --env-vars-file="./search-unused-sa/env.yaml"
           --ingress-settings="all"
           --set-secrets="SLACK_WEBHOOK=projects/ureuzy-org-system/secrets/slack_webhook:latest"
-          --service-account="audit-alert-functions@ureuzy-org-system.iam.gserviceaccount.com"
+          --service-account="search-unused-sa@ureuzy-org-system.iam.gserviceaccount.com"
