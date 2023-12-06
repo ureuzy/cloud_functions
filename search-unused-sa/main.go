@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"github.com/cloudevents/sdk-go/v2/event"
-	"github.com/ureuzy/cloud_functions/search-unused-sa/config"
 	"log"
 	"regexp"
 	"time"
@@ -17,6 +16,8 @@ import (
 	"github.com/samber/lo"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/policyanalyzer/v1"
+
+	"github.com/ureuzy/cloud_functions/search-unused-sa/config"
 )
 
 type Activity = policyanalyzer.GoogleCloudPolicyanalyzerV1Activity
@@ -69,38 +70,35 @@ type ServiceAccount struct {
 	ProjectNumber    string `json:"projectNumber"`
 }
 
-type Option func(*ServiceAccountActivity) *ServiceAccountActivity
+type Option func(*ServiceAccountActivity) []*ExtendPolicyanalyzerV1Activity
 
 func unUsedSA() Option {
-	return func(activity *ServiceAccountActivity) *ServiceAccountActivity {
-		activity.Activities = lo.Filter(activity.Activities, func(item *ExtendPolicyanalyzerV1Activity, index int) bool {
+	return func(activity *ServiceAccountActivity) []*ExtendPolicyanalyzerV1Activity {
+		return lo.Filter(activity.Activities, func(item *ExtendPolicyanalyzerV1Activity, index int) bool {
 			return item.unUsedSA()
 		})
-		return activity
 	}
 }
 
 func isUserCreatedSA(projectID string) Option {
-	return func(activity *ServiceAccountActivity) *ServiceAccountActivity {
-		activity.Activities = lo.Filter(activity.Activities, func(item *ExtendPolicyanalyzerV1Activity, index int) bool {
+	return func(activity *ServiceAccountActivity) []*ExtendPolicyanalyzerV1Activity {
+		return lo.Filter(activity.Activities, func(item *ExtendPolicyanalyzerV1Activity, index int) bool {
 			return item.isUserCreatedSA(projectID)
 		})
-		return activity
 	}
 }
 
-func sinceWasCreated(days int) Option {
-	return func(activity *ServiceAccountActivity) *ServiceAccountActivity {
-		activity.Activities = lo.Filter(activity.Activities, func(item *ExtendPolicyanalyzerV1Activity, index int) bool {
+func daysAfterCreation(days int) Option {
+	return func(activity *ServiceAccountActivity) []*ExtendPolicyanalyzerV1Activity {
+		return lo.Filter(activity.Activities, func(item *ExtendPolicyanalyzerV1Activity, index int) bool {
 			return item.daysAfterCreation(days)
 		})
-		return activity
 	}
 }
 
 func (s *ServiceAccountActivity) Filter(options []Option) *ServiceAccountActivity {
 	for _, opt := range options {
-		opt(s)
+		s.Activities = opt(s)
 	}
 	return s
 }
@@ -110,7 +108,6 @@ func init() {
 }
 
 func main(ctx context.Context, e event.Event) error {
-
 	conf, err := config.LoadConfig()
 	if err != nil {
 		return err
@@ -134,22 +131,19 @@ func main(ctx context.Context, e event.Event) error {
 		if errors.Is(err, iterator.Done) {
 			break
 		}
+
+		saActivities, err := saActivityAnalyze(policyanalyzerService, resp.ProjectId, "")
 		if err != nil {
 			log.Println(err)
+			continue
 		}
-
-		fmt.Println("aaaaaa")
-		saActivities, err := saActivityAnalyze(policyanalyzerService, resp.ProjectId, "")
-		fmt.Println("bbbbbb")
 		filteredActivities := saActivities.Filter([]Option{
 			unUsedSA(),
 			isUserCreatedSA(resp.ProjectId),
-			sinceWasCreated(conf.DaysAfterCreation),
+			daysAfterCreation(conf.DaysAfterCreation),
 		})
-		fmt.Println("cccccc")
 		filteredActivities.debugPrint()
 	}
-
 	return nil
 }
 
@@ -174,20 +168,20 @@ func saActivityAnalyze(svc *policyanalyzer.Service, projectID string, nextToken 
 
 func unMarshalActivity(activities []*policyanalyzer.GoogleCloudPolicyanalyzerV1Activity) []*ExtendPolicyanalyzerV1Activity {
 	var result []*ExtendPolicyanalyzerV1Activity
-	for _, activity := range activities {
+	for i, activity := range activities {
 		b, err := activity.Activity.MarshalJSON()
 		if err != nil {
 			log.Println(err)
 			continue
 		}
-		unMarshaledActivity := UnMarshaledActivity{}
+		var unMarshaledActivity UnMarshaledActivity
 		err = json.Unmarshal(b, &unMarshaledActivity)
 		if err != nil {
 			log.Println(err)
 			continue
 		}
 		result = append(result, &ExtendPolicyanalyzerV1Activity{
-			Activity:            activity,
+			Activity:            activities[i],
 			UnMarshaledActivity: unMarshaledActivity,
 		})
 	}
