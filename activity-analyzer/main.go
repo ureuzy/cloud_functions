@@ -1,13 +1,10 @@
-package search_unused_sa
+package activity_analyzer
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
-	"github.com/cloudevents/sdk-go/v2/event"
-	"github.com/slack-go/slack"
 	"log"
 	"regexp"
 	"strings"
@@ -15,11 +12,14 @@ import (
 
 	"cloud.google.com/go/resourcemanager/apiv3"
 	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
+	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
+	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/samber/lo"
+	"github.com/slack-go/slack"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/policyanalyzer/v1"
 
-	"github.com/ureuzy/cloud_functions/search-unused-sa/config"
+	"github.com/ureuzy/cloud_functions/activity-analyzer/config"
 )
 
 type Activity = policyanalyzer.GoogleCloudPolicyanalyzerV1Activity
