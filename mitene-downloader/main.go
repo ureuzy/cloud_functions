@@ -17,7 +17,7 @@ import (
 	"github.com/slack-go/slack"
 	"golang.org/x/net/html"
 
-	"mitene-downloader/config"
+	"github.com/ureuzy/cloud_functions/mitene-downloader/config"
 )
 
 func init() {
