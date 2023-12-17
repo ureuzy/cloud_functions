@@ -34,6 +34,9 @@ func main(ctx context.Context, e event.Event) error {
 	page := 1
 	var result []string
 	defer func() {
+		if len(result) == 0 {
+			return
+		}
 		toSlack(conf, result)
 	}()
 out:
