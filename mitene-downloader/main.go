@@ -75,7 +75,7 @@ out:
 		for _, file := range files {
 			path := buildPath(file)
 			if gs.exists(ctx, path) {
-				fmt.Printf("%s: already exists", path)
+				fmt.Printf("%s: already exists\n", path)
 				break out
 			}
 			writer := gs.Bucket(conf.BucketName).Object(path).NewWriter(ctx)
