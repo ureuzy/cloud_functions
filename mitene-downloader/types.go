@@ -3,7 +3,6 @@ package mitene_downloader
 import (
 	"cloud.google.com/go/storage"
 	"context"
-	"log"
 	"time"
 )
 
@@ -40,7 +39,6 @@ type WrapperStorageClient struct {
 func (r *WrapperStorageClient) exists(ctx context.Context, path string) bool {
 	attrs, err := r.Bucket(r.BucketName).Object(path).Attrs(ctx)
 	if err != nil {
-		log.Fatal(err)
 		return false
 	}
 	if attrs == nil {
