@@ -1,4 +1,4 @@
-name: Deploy analyze unused service account
+name: Deploy role recommender
 
 on:
   push:
