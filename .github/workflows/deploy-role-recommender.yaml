@@ -1,0 +1,47 @@
+name: Deploy analyze unused service account
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'role-recommender/**'
+      - '.github/workflows/deploy-role-recommender.yaml'
+
+jobs:
+  deploy-functions:
+    name: Deploy activity analyzer in org aggregation logs
+    runs-on: ubuntu-20.04
+
+    permissions:
+      contents: "read"
+      id-token: "write"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: "projects/833261298513/locations/global/workloadIdentityPools/github-actions/providers/github"
+          service_account: "gha-account@ureuzy-org-system.iam.gserviceaccount.com"
+
+      - name: Set up Cloud SDK
+        uses: 'google-github-actions/setup-gcloud@v1'
+
+      - name: Use to deploy a cloud function gen 2
+        run: >
+          gcloud functions deploy role-recommender
+          --gen2
+          --trigger-http
+          --runtime="go120" 
+          --region="asia-northeast1" 
+          --source="role-recommender"
+          --entry-point="Main"
+          --memory="128Mi"
+          --timeout="60s"
+          --env-vars-file="./role-recommender/env.yaml"
+          --ingress-settings="all"
+          --service-account="role-recommender@ureuzy-org-system.iam.gserviceaccount.com"
