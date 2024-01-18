@@ -2,6 +2,7 @@ package role_recommender
 
 import (
 	"context"
+	"fmt"
 	"google.golang.org/api/sheets/v4"
 	"log"
 )
@@ -12,7 +13,8 @@ type SheetsClient struct {
 
 type SpreadSheetsClient struct {
 	*sheets.SpreadsheetsService
-	sheetID string
+	sheetID   string
+	sheetName string
 }
 
 func NewSheetsClient(ctx context.Context) (*SheetsClient, error) {
@@ -25,32 +27,34 @@ func NewSheetsClient(ctx context.Context) (*SheetsClient, error) {
 	return &SheetsClient{srv}, nil
 }
 
-func (s *SheetsClient) SetSheetsID(sheetsID string) *SpreadSheetsClient {
-	return &SpreadSheetsClient{s.Spreadsheets, sheetsID}
+func (s *SheetsClient) SetSheets(sheetsID, sheetsName string) *SpreadSheetsClient {
+	return &SpreadSheetsClient{s.Spreadsheets, sheetsID, sheetsName}
 }
 
-func (s *SpreadSheetsClient) Append(range_ string, valuerange *sheets.ValueRange) *sheets.SpreadsheetsValuesAppendCall {
-	return s.Values.Append(s.sheetID, range_, valuerange)
+func (s *SpreadSheetsClient) Append(valuerange *sheets.ValueRange) *sheets.SpreadsheetsValuesAppendCall {
+	fmt.Println("write")
+	return s.Values.Append(s.sheetID, s.sheetName, valuerange)
 }
 
-func (s *SpreadSheetsClient) Get(range_ string) *sheets.SpreadsheetsValuesGetCall {
-	return s.Values.Get(s.sheetID, range_)
+func (s *SpreadSheetsClient) Get() *sheets.SpreadsheetsValuesGetCall {
+	return s.Values.Get(s.sheetID, s.sheetName)
 }
 
-func (s *SpreadSheetsClient) Update(range_ string, valuerange *sheets.ValueRange) *sheets.SpreadsheetsValuesUpdateCall {
-	return s.Values.Update(s.sheetID, range_, valuerange)
+func (s *SpreadSheetsClient) Update(valuerange *sheets.ValueRange) *sheets.SpreadsheetsValuesUpdateCall {
+	fmt.Println("write")
+	return s.Values.Update(s.sheetID, s.sheetName, valuerange)
 }
 
-func (s *SpreadSheetsClient) Clear(range_ string, clearvaluerequest *sheets.ClearValuesRequest) *sheets.SpreadsheetsValuesClearCall {
-	return s.Values.Clear(s.sheetID, range_, clearvaluerequest)
+func (s *SpreadSheetsClient) Clear(clearvaluerequest *sheets.ClearValuesRequest) *sheets.SpreadsheetsValuesClearCall {
+	return s.Values.Clear(s.sheetID, s.sheetName, clearvaluerequest)
 }
 
-func (s *SpreadSheetsClient) Init(range_ string) error {
-	_, err := s.Clear(range_, &sheets.ClearValuesRequest{}).Do()
+func (s *SpreadSheetsClient) Init() error {
+	_, err := s.Clear(&sheets.ClearValuesRequest{}).Do()
 	if err != nil {
 		return err
 	}
-	_, err = s.Append(range_, &sheets.ValueRange{Values: GetInitData()}).
+	_, err = s.Append(&sheets.ValueRange{Values: GetInitData()}).
 		ValueInputOption("USER_ENTERED").Do()
 	if err != nil {
 		return err

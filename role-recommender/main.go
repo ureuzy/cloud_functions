@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
+	"github.com/cloudevents/sdk-go/v2/event"
 	"log"
 	"strings"
 
@@ -11,9 +13,6 @@ import (
 	"cloud.google.com/go/recommender/apiv1/recommenderpb"
 	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
 	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
-	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
-	"github.com/cloudevents/sdk-go/v2/event"
-	"github.com/samber/lo"
 	"github.com/ureuzy/cloud_functions/role-recommender/config"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/sheets/v4"
@@ -63,12 +62,13 @@ func main(ctx context.Context, e event.Event) error {
 	if err != nil {
 		return err
 	}
-	sheetSrv := sheetsClient.SetSheetsID(conf.SheetID)
-	if err := sheetSrv.Init("シート1"); err != nil {
+	sheetSrv := sheetsClient.SetSheets(conf.SheetID, "シート1")
+	if err = sheetSrv.Init(); err != nil {
 		return err
 	}
 
 	organization := organizationsClient.SearchOrganizations(ctx, organizationsReq)
+	data := SheetData{}
 	for {
 		resource, err := organization.Next()
 		if errors.Is(err, iterator.Done) {
@@ -78,7 +78,11 @@ func main(ctx context.Context, e event.Event) error {
 			log.Println(err)
 			break
 		}
-		run(sheetSrv, recommend(ctx, recommenderClient, resource), resource)
+		r := recommend(ctx, recommenderClient, resource)
+		if len(r.RecommendsMap) == 0 {
+			continue
+		}
+		data.merge(r.toSheetData())
 	}
 
 	folder := foldersClient.SearchFolders(ctx, foldersReq)
@@ -91,7 +95,11 @@ func main(ctx context.Context, e event.Event) error {
 			log.Println(err)
 			break
 		}
-		run(sheetSrv, recommend(ctx, recommenderClient, resource), resource)
+		r := recommend(ctx, recommenderClient, resource)
+		if len(r.RecommendsMap) == 0 {
+			continue
+		}
+		data.merge(r.toSheetData())
 	}
 
 	project := projectsClient.SearchProjects(ctx, projectsReq)
@@ -107,45 +115,20 @@ func main(ctx context.Context, e event.Event) error {
 		if strings.HasPrefix(resource.ProjectId, "sys-") {
 			continue
 		}
-		run(sheetSrv, recommend(ctx, recommenderClient, resource), resource)
+		r := recommend(ctx, recommenderClient, resource)
+		if len(r.RecommendsMap) == 0 {
+			continue
+		}
+		data.merge(r.toSheetData())
+
 	}
+	run(sheetSrv, data)
+
 	return nil
 }
 
-type Recommend struct {
-	Role   string
-	Member string
-}
-
-type RecommendMap map[string][]Recommend
-
-func (r *RecommendMap) toSheetData(resourceName string, ID string) [][]interface{} {
-	var sheet [][]interface{}
-	for k, v := range *r {
-		col := make([]interface{}, 4)
-		var roles string
-		for _, s := range v {
-			roles += fmt.Sprintf("%s\n", s.Role)
-		}
-		for i, s := range []string{resourceName, strings.Split(ID, "/")[0], k, roles} {
-			col[i] = s
-		}
-		sheet = append(sheet, col)
-	}
-	return sheet
-}
-
-type Resource interface {
-	GetName() string
-	GetDisplayName() string
-}
-
-func run(sheetSrv *SpreadSheetsClient, data RecommendMap, resource Resource) {
-	d := data.toSheetData(resource.GetDisplayName(), resource.GetName())
-	if len(data) == 0 {
-		return
-	}
-	_, err := sheetSrv.Append("シート1", &sheets.ValueRange{Values: d}).
+func run(sheetSrv *SpreadSheetsClient, data [][]interface{}) {
+	_, err := sheetSrv.Append(&sheets.ValueRange{Values: data}).
 		ValueInputOption("RAW").
 		Do()
 	if err != nil {
@@ -154,8 +137,8 @@ func run(sheetSrv *SpreadSheetsClient, data RecommendMap, resource Resource) {
 	}
 }
 
-func recommend(ctx context.Context, client *recommender.Client, resource Resource) RecommendMap {
-	var result []Recommend
+func recommend(ctx context.Context, client *recommender.Client, resource Resource) Hoge {
+	var result Recommends
 
 	req := &recommenderpb.ListRecommendationsRequest{
 		Parent: fmt.Sprintf("%s/locations/global/recommenders/google.iam.policy.Recommender", resource.GetName()),
@@ -188,7 +171,9 @@ func recommend(ctx context.Context, client *recommender.Client, resource Resourc
 			}
 		}
 	}
-	return lo.GroupBy(result, func(item Recommend) string {
-		return item.Member
-	})
+
+	return Hoge{
+		Resource:      resource,
+		RecommendsMap: result.groupByMember(),
+	}
 }
