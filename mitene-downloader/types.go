@@ -3,6 +3,7 @@ package mitene_downloader
 import (
 	"cloud.google.com/go/storage"
 	"context"
+	"sort"
 	"time"
 )
 
@@ -29,6 +30,12 @@ type MediaFile struct {
 	ThumbnailGenerated bool      `json:"thumbnailGenerated"`
 	ExpiringURL        string    `json:"expiringUrl"`
 	ExpiringThumbURL   string    `json:"expiringThumbUrl"`
+}
+
+func (m *MediaFiles) sort() {
+	sort.Slice(*m, func(i, j int) bool {
+		return (*m)[i].TookAt.Unix() > (*m)[j].TookAt.Unix()
+	})
 }
 
 type WrapperStorageClient struct {

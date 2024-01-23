@@ -55,6 +55,7 @@ out:
 		if err = json.Unmarshal([]byte(links), &files); err != nil {
 			log.Println(err)
 		}
+		files.sort()
 
 		storageClient, err := storage.NewClient(ctx)
 		if err != nil {
