@@ -41,7 +41,7 @@ jobs:
           --source="role-recommender"
           --entry-point="Main"
           --memory="128Mi"
-          --timeout="60s"
+          --timeout="360s"
           --env-vars-file="./role-recommender/env.yaml"
           --ingress-settings="all"
           --service-account="role-recommender@ureuzy-org-system.iam.gserviceaccount.com"

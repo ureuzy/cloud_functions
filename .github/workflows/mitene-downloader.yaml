@@ -41,7 +41,7 @@ jobs:
           --source="mitene-downloader"
           --entry-point="Main"
           --memory="128Mi"
-          --timeout="60s"
+          --timeout="360s"
           --env-vars-file="./mitene-downloader/env.yaml"
           --ingress-settings="all"
           --set-secrets="SLACK_WEBHOOK=projects/ureuzy-org-system/secrets/slack_webhook:latest"
