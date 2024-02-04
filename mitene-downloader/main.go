@@ -83,16 +83,16 @@ out:
 			res, err := client.R().Get(file.ExpiringURL)
 			if err != nil {
 				log.Println(err.Error())
-				continue
+				break out
 			}
 			if _, err = io.Copy(writer, bytes.NewReader(res.Body())); err != nil {
 				log.Println(err.Error())
-				continue
+				break out
 			}
 
 			if err = writer.Close(); err != nil {
 				log.Println(err.Error())
-				continue
+				break out
 			}
 			log.Printf("Downloaded: %d - %s\n", file.ID, file.TookAt.String())
 			result = append(result, path)
