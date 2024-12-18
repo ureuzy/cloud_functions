@@ -1,4 +1,4 @@
-package mitene_downloader
+package main
 
 import (
 	"bytes"
@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
-	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/dop251/goja"
 	"github.com/go-resty/resty/v2"
 	"github.com/slack-go/slack"
@@ -20,14 +18,11 @@ import (
 	"github.com/ureuzy/cloud_functions/mitene-downloader/config"
 )
 
-func init() {
-	functions.CloudEvent("Main", main)
-}
-
-func main(ctx context.Context, e event.Event) error {
+func main() {
+	ctx := context.Background()
 	conf, err := config.LoadConfig()
 	if err != nil {
-		return err
+		log.Fatalf("failed to load config: %v", err)
 	}
 
 	client := resty.New()
@@ -100,7 +95,6 @@ out:
 		}
 		page += 1
 	}
-	return nil
 }
 
 func buildPath(file *MediaFile) string {
@@ -123,6 +117,7 @@ func ParseLinks(body []byte) (string, error) {
 		NextSibling.
 		FirstChild.
 		FirstChild.
+		NextSibling.
 		NextSibling.
 		NextSibling.
 		NextSibling.

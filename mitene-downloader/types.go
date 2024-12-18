@@ -1,4 +1,4 @@
-package mitene_downloader
+package main
 
 import (
 	"cloud.google.com/go/storage"

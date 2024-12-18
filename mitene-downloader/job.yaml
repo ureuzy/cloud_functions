@@ -1,0 +1,33 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: mitene-downloader
+spec:
+  template:
+    spec:
+      template:
+        spec:
+          containers:
+          - image: mitene-downloader-image
+            resources:
+              limits:
+                cpu: "1"
+                memory: 512Mi
+            env:
+            - name: CHANNEL
+              value: "#google_cloud"
+            - name: BUCKET_NAME
+              value: "ureuzy-family-photos"
+            - name: SLACK_WEBHOOK
+              valueFrom:
+                secretKeyRef:
+                  key: latest
+                  name: slack-webhook
+            - name: PHOTO_URL
+              valueFrom:
+                secretKeyRef:
+                  key: latest
+                  name: mitene-url
+          maxRetries: 3
+          timeoutSeconds: "180"
+          serviceAccountName: mitene-downloader@ureuzy-common.iam.gserviceaccount.com

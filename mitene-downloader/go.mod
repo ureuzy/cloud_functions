@@ -1,11 +1,9 @@
 module github.com/ureuzy/cloud_functions/mitene-downloader
 
-go 1.20
+go 1.22
 
 require (
 	cloud.google.com/go/storage v1.36.0
-	github.com/GoogleCloudPlatform/functions-framework-go v1.8.0
-	github.com/cloudevents/sdk-go/v2 v2.14.0
 	github.com/dop251/goja v0.0.0-20231027120936-b396bb4c349d
 	github.com/go-resty/resty/v2 v2.10.0
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -28,13 +26,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
-	github.com/json-iterator/go v1.1.10 // indirect
-	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
-	github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.uber.org/atomic v1.4.0 // indirect
-	go.uber.org/multierr v1.1.0 // indirect
-	go.uber.org/zap v1.10.0 // indirect
 	golang.org/x/crypto v0.16.0 // indirect
 	golang.org/x/oauth2 v0.13.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect

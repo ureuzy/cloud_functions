@@ -1,0 +1,7 @@
+.git
+.github
+.gitignore
+.idea
+Dockerfile
+.dockerignore
+**/main_test.go
