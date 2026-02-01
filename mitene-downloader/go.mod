@@ -1,6 +1,6 @@
 module github.com/ureuzy/cloud_functions/mitene-downloader
 
-go 1.22
+go 1.25
 
 require (
 	cloud.google.com/go/storage v1.36.0

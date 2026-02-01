@@ -1,10 +1,11 @@
 package main
 
 import (
-	"cloud.google.com/go/storage"
 	"context"
 	"sort"
 	"time"
+
+	"cloud.google.com/go/storage"
 )
 
 type MediaFiles []*MediaFile
@@ -18,7 +19,7 @@ type MediaFile struct {
 	TookAt             time.Time `json:"tookAt"`
 	AudienceType       string    `json:"audienceType"`
 	MediaWidth         int       `json:"mediaWidth"`
-	MediaHight         int       `json:"mediaHeight"`
+	MediaHeight        int       `json:"mediaHeight"`
 	MediaOrientation   int       `json:"mediaOrientation"`
 	Latitude           float32   `json:"latitude"`
 	Longitude          float32   `json:"longitude"`
