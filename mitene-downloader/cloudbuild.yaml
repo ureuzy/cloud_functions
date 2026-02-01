@@ -1,4 +1,16 @@
 steps:
+  # 0. Build the stage of a container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--target=builder'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_CONTAINER_NAME}:builder'
+      - '--cache-from'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_CONTAINER_NAME}:builder'
+      - '.'
+    dir: 'mitene-downloader'
+
   # 1. Build the container image
   - name: 'gcr.io/cloud-builders/docker'
     args:
