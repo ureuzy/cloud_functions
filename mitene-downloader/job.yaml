@@ -29,5 +29,5 @@ spec:
                   key: latest
                   name: mitene-url
           maxRetries: 3
-          timeoutSeconds: "180"
+          timeoutSeconds: "600"
           serviceAccountName: mitene-downloader@ureuzy-common.iam.gserviceaccount.com
