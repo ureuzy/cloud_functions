@@ -95,20 +95,6 @@ func (l *LogEntry) getPrincipalEmail() string {
 	return l.ProtoPayload.AuthenticationInfo.PrincipalEmail
 }
 
-func (l *LogEntry) getColor() string {
-	if l.ProtoPayload == nil {
-		return ""
-	}
-	switch l.getPartialMethodName() {
-	case "InsertJob":
-		return "#36a64f"
-	case "SetIamPolicy":
-		return "#d3381c"
-	default:
-		return ""
-	}
-}
-
 func (l *LogEntry) getIAMDeltas() string {
 	if l.ProtoPayload == nil {
 		return ""
@@ -220,7 +206,7 @@ func run(ctx context.Context, e event.Event) error {
 	blocks = append(blocks, slack.NewDividerBlock(), slack.NewSectionBlock(nil, []*slack.TextBlockObject{viewLogObj}, nil))
 
 	attachment := slack.Attachment{
-		Color:  logEntry.getColor(),
+		Color:  "#d3381c",
 		Blocks: slack.Blocks{BlockSet: blocks},
 	}
 
