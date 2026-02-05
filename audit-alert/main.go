@@ -81,18 +81,24 @@ func (l *LogEntry) getPartialMethodName() string {
 }
 
 func (l *LogEntry) getTime() (string, error) {
-	jst, err := time.LoadLocation("Asia/Tokyo")
-	if err != nil {
-		return "", err
+	jst := time.FixedZone("Asia/Tokyo", 9*60*60)
+	if l.Timestamp == nil {
+		return time.Now().In(jst).Format("2006/01/02 15:04:05"), nil
 	}
 	return l.Timestamp.AsTime().In(jst).Format("2006/01/02 15:04:05"), nil
 }
 
 func (l *LogEntry) getPrincipalEmail() string {
+	if l.ProtoPayload == nil || l.ProtoPayload.AuthenticationInfo == nil {
+		return "unknown"
+	}
 	return l.ProtoPayload.AuthenticationInfo.PrincipalEmail
 }
 
 func (l *LogEntry) getColor() string {
+	if l.ProtoPayload == nil {
+		return ""
+	}
 	switch l.getPartialMethodName() {
 	case "InsertJob":
 		return "#36a64f"
@@ -104,36 +110,44 @@ func (l *LogEntry) getColor() string {
 }
 
 func run(ctx context.Context, e event.Event) error {
+	log.Printf("Processing event ID: %s, Type: %s", e.ID(), e.Type())
 
 	conf, err := config.LoadConfig()
 	if err != nil {
+		log.Printf("Error loading config: %v", err)
 		return err
 	}
 
 	logEntry, err := eventToLogEntry(e)
 	if err != nil {
+		log.Printf("Error converting event to log entry: %v", err)
 		return err
 	}
 
 	t, err := logEntry.getTime()
 	if err != nil {
+		log.Printf("Error getting time: %v", err)
 		return err
 	}
 
-	timestamp := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*TimeStamp*\n %s", t), false, false)
-	principalEmail := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*PrincipalEmail*\n %s", logEntry.getPrincipalEmail()), false, false)
-	methodName := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*MethodName*\n %s", logEntry.getPartialMethodName()), false, false)
-	targetProject := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*TargetProject*\n %s", logEntry.getTargetProject()), false, false)
-	viewLog := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("<%s|ViewLog>", logEntry.buildSelfLink(conf.StorageScope, conf.Project)), false, false)
+	principalEmail := logEntry.getPrincipalEmail()
+	methodName := logEntry.getPartialMethodName()
+	log.Printf("Audit Log: Method=%s, User=%s", methodName, principalEmail)
+
+	timestampObj := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*TimeStamp*\n %s", t), false, false)
+	principalEmailObj := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*PrincipalEmail*\n %s", principalEmail), false, false)
+	methodNameObj := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*MethodName*\n %s", methodName), false, false)
+	targetProjectObj := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*TargetProject*\n %s", logEntry.getTargetProject()), false, false)
+	viewLogObj := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("<%s|ViewLog>", logEntry.buildSelfLink(conf.StorageScope, conf.Project)), false, false)
 
 	fieldsSection := slack.NewSectionBlock(nil, []*slack.TextBlockObject{
-		timestamp,
-		principalEmail,
-		methodName,
-		targetProject,
+		timestampObj,
+		principalEmailObj,
+		methodNameObj,
+		targetProjectObj,
 	}, nil)
 	linkSection := slack.NewSectionBlock(nil, []*slack.TextBlockObject{
-		viewLog,
+		viewLogObj,
 	}, nil)
 
 	blocks := slack.NewBlockMessage(fieldsSection, slack.NewDividerBlock(), linkSection).Blocks
@@ -142,15 +156,19 @@ func run(ctx context.Context, e event.Event) error {
 		Blocks: blocks,
 	}
 
+	log.Printf("Sending notification to Slack channel: %s", conf.Channel)
 	err = slack.PostWebhook(conf.SlackWebhookUrl, &slack.WebhookMessage{
 		Username:    "AuditLog",
 		Channel:     conf.Channel,
 		Attachments: []slack.Attachment{attachment},
 	})
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error posting to Slack: %v", err)
 		return err
 	}
+
+	log.Printf("Successfully sent notification for event %s", e.ID())
 	return nil
 }
+
 
