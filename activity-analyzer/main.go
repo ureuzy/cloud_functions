@@ -151,7 +151,7 @@ func saActivityAnalyze(svc *policyanalyzer.Service, projectID string, nextToken 
 	if err != nil {
 		return nil, err
 	}
-	return &ServiceAccountActivity{Activities: append(result, activities.Activities...)} , nil
+	return &ServiceAccountActivity{Activities: append(result, activities.Activities...)}, nil
 }
 
 func unMarshalActivity(activities []*policyanalyzer.GoogleCloudPolicyanalyzerV1Activity) []*ExtendPolicyanalyzerV1Activity {
