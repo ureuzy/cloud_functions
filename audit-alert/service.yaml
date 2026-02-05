@@ -2,6 +2,8 @@ apiVersion: run.googleapis.com/v1
 kind: Service
 metadata:
   name: audit-alert
+  annotations:
+    run.googleapis.com/ingress: internal
 spec:
   template:
     spec:
