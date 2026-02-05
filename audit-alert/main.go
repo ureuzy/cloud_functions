@@ -109,6 +109,31 @@ func (l *LogEntry) getColor() string {
 	}
 }
 
+func (l *LogEntry) getIAMDeltas() string {
+	if l.ProtoPayload == nil || l.ProtoPayload.Metadata == nil {
+		return ""
+	}
+
+	// metadata.bindingDeltas を探す
+	deltas, ok := l.ProtoPayload.Metadata.AsMap()["bindingDeltas"].([]interface{})
+	if !ok || len(deltas) == 0 {
+		return ""
+	}
+
+	var result strings.Builder
+	for _, d := range deltas {
+		delta, ok := d.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		action := delta["action"] // ADD or REMOVE
+		role := delta["role"]
+		member := delta["member"]
+		result.WriteString(fmt.Sprintf("• *%s*: %s to %s\n", action, role, member))
+	}
+	return result.String()
+}
+
 func run(ctx context.Context, e event.Event) error {
 	log.Printf("Processing event ID: %s, Type: %s", e.ID(), e.Type())
 
@@ -134,26 +159,37 @@ func run(ctx context.Context, e event.Event) error {
 	methodName := logEntry.getPartialMethodName()
 	log.Printf("Audit Log: Method=%s, User=%s", methodName, principalEmail)
 
+	// 基本情報の組み立て
 	timestampObj := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*TimeStamp*\n %s", t), false, false)
 	principalEmailObj := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*PrincipalEmail*\n %s", principalEmail), false, false)
 	methodNameObj := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*MethodName*\n %s", methodName), false, false)
 	targetProjectObj := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*TargetProject*\n %s", logEntry.getTargetProject()), false, false)
-	viewLogObj := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("<%s|ViewLog>", logEntry.buildSelfLink(conf.StorageScope, conf.Project)), false, false)
 
-	fieldsSection := slack.NewSectionBlock(nil, []*slack.TextBlockObject{
+	fields := []*slack.TextBlockObject{
 		timestampObj,
 		principalEmailObj,
 		methodNameObj,
 		targetProjectObj,
-	}, nil)
-	linkSection := slack.NewSectionBlock(nil, []*slack.TextBlockObject{
-		viewLogObj,
-	}, nil)
+	}
 
-	blocks := slack.NewBlockMessage(fieldsSection, slack.NewDividerBlock(), linkSection).Blocks
+	blocks := []slack.Block{
+		slack.NewSectionBlock(nil, fields, nil),
+	}
+
+	// IAM詳細情報があれば追加
+	if iamDeltas := logEntry.getIAMDeltas(); iamDeltas != "" {
+		iamHeader := slack.NewContextBlock("", slack.NewTextBlockObject("mrkdwn", "*IAM Policy Changes*", false, false))
+		iamContent := slack.NewSectionBlock(slack.NewTextBlockObject("mrkdwn", iamDeltas, false, false), nil, nil)
+		blocks = append(blocks, slack.NewDividerBlock(), iamHeader, iamContent)
+	}
+
+	// ログへのリンク追加
+	viewLogObj := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("<%s|ViewLog>", logEntry.buildSelfLink(conf.StorageScope, conf.Project)), false, false)
+	blocks = append(blocks, slack.NewDividerBlock(), slack.NewSectionBlock(nil, []*slack.TextBlockObject{viewLogObj}, nil))
+
 	attachment := slack.Attachment{
 		Color:  logEntry.getColor(),
-		Blocks: blocks,
+		Blocks: slack.Blocks{BlockSet: blocks},
 	}
 
 	log.Printf("Sending notification to Slack channel: %s", conf.Channel)
@@ -170,5 +206,4 @@ func run(ctx context.Context, e event.Event) error {
 	log.Printf("Successfully sent notification for event %s", e.ID())
 	return nil
 }
-
 
