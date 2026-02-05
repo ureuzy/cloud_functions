@@ -1,6 +1,6 @@
 module github.com/ureuzy/cloud_functions/activity-analyzer
 
-go 1.24
+go 1.25
 
 require (
 	cloud.google.com/go/resourcemanager v1.9.4
