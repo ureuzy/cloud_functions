@@ -11,13 +11,13 @@ RUN go mod download
 COPY . .
 
 # 静的バイナリとしてビルド
-RUN CGO_ENABLED=0 GOOS=linux go build -v -o mitene-downloader .
+RUN CGO_ENABLED=0 GOOS=linux go build -v -o audit-alert .
 
 # 実行ステージ
 FROM gcr.io/distroless/static-debian12
 
 # バイナリをコピー
-COPY --from=builder /app/mitene-downloader /mitene-downloader
+COPY --from=builder /app/audit-alert /audit-alert
 
 # 実行
-ENTRYPOINT ["/mitene-downloader"]
+ENTRYPOINT ["/audit-alert"]

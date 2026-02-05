@@ -1,14 +1,16 @@
-package auditalert
+package main
 
 import (
 	"context"
 	"fmt"
 	"log"
 	"net/url"
+	"os"
 	"path"
 	"strings"
 	"time"
 
+	"github.com/GoogleCloudPlatform/functions-framework-go/funcframework"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/googleapis/google-cloudevents-go/cloud/auditdata"
@@ -19,7 +21,18 @@ import (
 )
 
 func init() {
-	functions.CloudEvent("Main", main)
+	functions.CloudEvent("Main", run)
+}
+
+func main() {
+	// Use PORT environment variable, or default to 8080.
+	port := "8080"
+	if envPort := os.Getenv("PORT"); envPort != "" {
+		port = envPort
+	}
+	if err := funcframework.Start(port); err != nil {
+		log.Fatalf("funcframework.Start: %v\n", err)
+	}
 }
 
 type MessagePublishedData struct {
@@ -90,7 +103,7 @@ func (l *LogEntry) getColor() string {
 	}
 }
 
-func main(ctx context.Context, e event.Event) error {
+func run(ctx context.Context, e event.Event) error {
 
 	conf, err := config.LoadConfig()
 	if err != nil {
@@ -140,3 +153,4 @@ func main(ctx context.Context, e event.Event) error {
 	}
 	return nil
 }
+

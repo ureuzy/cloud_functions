@@ -1,0 +1,7 @@
+.git
+.gitignore
+Dockerfile
+cloudbuild.yaml
+skaffold.yaml
+service.yaml
+env.yaml

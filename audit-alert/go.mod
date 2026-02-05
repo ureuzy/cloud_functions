@@ -1,6 +1,6 @@
 module github.com/ureuzy/cloud_functions/audit-alert
 
-go 1.20
+go 1.24
 
 require (
 	github.com/GoogleCloudPlatform/functions-framework-go v1.7.4
@@ -12,6 +12,7 @@ require (
 )
 
 require (
+	cloud.google.com/go/functions v1.13.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/json-iterator/go v1.1.10 // indirect

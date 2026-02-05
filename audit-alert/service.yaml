@@ -1,0 +1,24 @@
+apiVersion: run.googleapis.com/v1
+kind: Service
+metadata:
+  name: audit-alert
+spec:
+  template:
+    spec:
+      containers:
+      - image: audit-alert-image
+        env:
+        - name: FUNCTION_TARGET
+          value: "Main"
+        - name: CHANNEL
+          value: "#google_cloud"
+        - name: STORAGE_SCOPE
+          value: "projects/ureuzy-org-system/locations/global/buckets/_Default/views/_AllLogs"
+        - name: PROJECT
+          value: "ureuzy-org-system"
+        - name: SLACK_WEBHOOK
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: slack-webhook
+      serviceAccountName: audit-alert@ureuzy-common.iam.gserviceaccount.com

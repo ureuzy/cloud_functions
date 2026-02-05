@@ -1,4 +1,4 @@
-package activity_analyzer
+package main
 
 import (
 	"context"
@@ -12,8 +12,6 @@ import (
 
 	"cloud.google.com/go/resourcemanager/apiv3"
 	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
-	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
-	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/samber/lo"
 	"github.com/slack-go/slack"
 	"google.golang.org/api/iterator"
@@ -93,25 +91,22 @@ func (s *ServiceAccountActivity) Filter(options []Option) *ServiceAccountActivit
 	return s
 }
 
-func init() {
-	functions.CloudEvent("Main", main)
-}
-
-func main(ctx context.Context, e event.Event) error {
+func main() {
+	ctx := context.Background()
 	conf, err := config.LoadConfig()
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 
 	c, err := resourcemanager.NewProjectsClient(ctx)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 	defer c.Close()
 
 	policyanalyzerService, err := policyanalyzer.NewService(ctx)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 
 	req := &resourcemanagerpb.SearchProjectsRequest{}
@@ -135,8 +130,9 @@ func main(ctx context.Context, e event.Event) error {
 		})
 		result = append(result, filteredActivities.Activities...)
 	}
-	toSlack(conf, result)
-	return nil
+	if err := toSlack(conf, result); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func saActivityAnalyze(svc *policyanalyzer.Service, projectID string, nextToken string) (*ServiceAccountActivity, error) {
@@ -155,7 +151,7 @@ func saActivityAnalyze(svc *policyanalyzer.Service, projectID string, nextToken 
 	if err != nil {
 		return nil, err
 	}
-	return &ServiceAccountActivity{Activities: append(result, activities.Activities...)}, nil
+	return &ServiceAccountActivity{Activities: append(result, activities.Activities...)} , nil
 }
 
 func unMarshalActivity(activities []*policyanalyzer.GoogleCloudPolicyanalyzerV1Activity) []*ExtendPolicyanalyzerV1Activity {

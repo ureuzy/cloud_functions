@@ -1,0 +1,22 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: activity-analyzer
+spec:
+  template:
+    spec:
+      template:
+        spec:
+          containers:
+          - image: activity-analyzer-image
+            env:
+            - name: CHANNEL
+              value: "#google_cloud"
+            - name: DAYS_AFTER_CREATION
+              value: "30"
+            - name: SLACK_WEBHOOK
+              valueFrom:
+                secretKeyRef:
+                  key: latest
+                  name: slack-webhook
+          serviceAccountName: activity-analyzer@ureuzy-common.iam.gserviceaccount.com
