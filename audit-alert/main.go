@@ -110,13 +110,45 @@ func (l *LogEntry) getColor() string {
 }
 
 func (l *LogEntry) getIAMDeltas() string {
-	if l.ProtoPayload == nil || l.ProtoPayload.Metadata == nil {
+	if l.ProtoPayload == nil {
 		return ""
 	}
 
-	// metadata.bindingDeltas を探す
-	deltas, ok := l.ProtoPayload.Metadata.AsMap()["bindingDeltas"].([]interface{})
-	if !ok || len(deltas) == 0 {
+	var deltas []interface{}
+	found := false
+
+	// 1. metadata.bindingDeltas を確認
+	if l.ProtoPayload.Metadata != nil {
+		m := l.ProtoPayload.Metadata.AsMap()
+		if d, ok := m["bindingDeltas"].([]interface{}); ok && len(d) > 0 {
+			deltas = d
+			found = true
+			log.Printf("Found IAM deltas in metadata")
+		} else {
+			log.Printf("metadata exists but no bindingDeltas found. content: %+v", m)
+		}
+	}
+
+	// 2. metadata で見つからなければ serviceData.policyDelta.bindingDeltas を確認
+	if !found && l.ProtoPayload.ServiceData != nil {
+		sData := l.ProtoPayload.ServiceData.AsMap()
+		if pDelta, ok := sData["policyDelta"].(map[string]interface{}); ok {
+			if bDeltas, ok := pDelta["bindingDeltas"].([]interface{}); ok && len(bDeltas) > 0 {
+				deltas = bDeltas
+				found = true
+				log.Printf("Found IAM deltas in serviceData.policyDelta")
+			} else {
+				log.Printf("serviceData.policyDelta exists but no bindingDeltas found. content: %+v", pDelta)
+			}
+		} else {
+			log.Printf("serviceData exists but no policyDelta found. content: %+v", sData)
+		}
+	}
+
+	if !found {
+		if l.ProtoPayload.Metadata == nil && l.ProtoPayload.ServiceData == nil {
+			log.Printf("Neither metadata nor serviceData exists in protoPayload for method %s", l.ProtoPayload.MethodName)
+		}
 		return ""
 	}
 
@@ -206,4 +238,3 @@ func run(ctx context.Context, e event.Event) error {
 	log.Printf("Successfully sent notification for event %s", e.ID())
 	return nil
 }
-
