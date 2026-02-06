@@ -1,0 +1,28 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: ai-web-summarizer
+spec:
+  template:
+    spec:
+      template:
+        spec:
+          containers:
+          - image: ai-web-summarizer-image
+            env:
+            - name: CHANNEL
+              value: "#google_cloud"
+            - name: TARGET_URL
+              value: "https://example.com" # プレースホルダー、実際には上書き推奨
+            - name: PROJECT_ID
+              value: "ureuzy-org-system"
+            - name: LOCATION
+              value: "us-central1"
+            - name: GEMINI_MODEL
+              value: "gemini-1.5-flash"
+            - name: SLACK_WEBHOOK
+              valueFrom:
+                secretKeyRef:
+                  key: latest
+                  name: slack-webhook
+          serviceAccountName: audit-alert@ureuzy-common.iam.gserviceaccount.com # 既存のSAを流用（Vertex AI権限が必要）
