@@ -21,4 +21,4 @@ spec:
                 secretKeyRef:
                   key: latest
                   name: slack-webhook
-          serviceAccountName: audit-alert@ureuzy-common.iam.gserviceaccount.com # BigQuery閲覧権限が必要
+          serviceAccountName: billing-monitor@ureuzy-common.iam.gserviceaccount.com # BigQuery閲覧権限が必要
