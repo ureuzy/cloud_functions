@@ -13,7 +13,7 @@ spec:
             - name: CHANNEL
               value: "#news"
             - name: TARGET_URLS
-              value: "https://docs.cloud.google.com/release-notes,https://aws.amazon.com/jp/new/,https://lwkd.info/feed.xml" # プレースホルダー、実際にはカンマ区切りで指定可能
+              value: "https://docs.cloud.google.com/release-notes,https://aws.amazon.com/jp/new/,https://lwkd.info/feed.xml,https://blog.argoproj.io/" # プレースホルダー、実際にはカンマ区切りで指定可能
             - name: PROJECT_ID
               value: "ureuzy-ai"
             - name: LOCATION
