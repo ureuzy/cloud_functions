@@ -20,9 +20,9 @@ spec:
               value: "global"
             - name: GEMINI_MODEL
               value: "gemini-3-flash-preview"
-            - name: SLACK_WEBHOOK
+            - name: SLACK_BOT_TOKEN
               valueFrom:
                 secretKeyRef:
                   key: latest
-                  name: slack-webhook
+                  name: slack-ai-bot
           serviceAccountName: ai-web-summarizer@ureuzy-common.iam.gserviceaccount.com # 既存のSAを流用（Vertex AI権限が必要）

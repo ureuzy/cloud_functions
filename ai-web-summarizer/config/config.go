@@ -3,7 +3,7 @@ package config
 import "github.com/kelseyhightower/envconfig"
 
 type Config struct {
-	SlackWebhookUrl string   `envconfig:"SLACK_WEBHOOK" required:"true"`
+	SlackBotToken   string   `envconfig:"SLACK_BOT_TOKEN" required:"true"`
 	Channel         string   `envconfig:"CHANNEL" required:"true"`
 	TargetURLs      []string `envconfig:"TARGET_URLS" required:"true"`
 	ProjectID       string   `envconfig:"PROJECT_ID" required:"true"`
