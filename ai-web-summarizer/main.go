@@ -7,9 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/slack-go/slack"
-	"golang.org/x/net/html"
 	"google.golang.org/genai"
 
 	"github.com/ureuzy/cloud_functions/ai-web-summarizer/config"
@@ -22,7 +20,6 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	client := resty.New()
 	genaiClient, err := genai.NewClient(ctx, &genai.ClientConfig{
 		Project:  conf.ProjectID,
 		Location: conf.Location,
@@ -40,29 +37,15 @@ func main() {
 
 		log.Printf("--- Processing: %s ---", targetURL)
 
-		// 1. Fetch Web Page
-		log.Printf("Fetching content from: %s", targetURL)
-		resp, err := client.R().Get(targetURL)
-		if err != nil {
-			log.Printf("Failed to fetch URL %s: %v", targetURL, err)
-			continue
-		}
-
-		// 2. Extract Text from HTML
-		bodyText := extractText(resp.String())
-		if len(bodyText) > 10000 {
-			bodyText = bodyText[:10000]
-		}
-
-		// 3. AI Translation and Summary
-		log.Printf("Summarizing with Gemini...")
-		summary, err := summarize(ctx, genaiClient, conf.ModelName, bodyText)
+		// Google Searchツールを利用するため、直接URLを渡す
+		log.Printf("Summarizing with Gemini (using Google Search tool)...")
+		summary, err := summarize(ctx, genaiClient, conf.ModelName, targetURL)
 		if err != nil {
 			log.Printf("Failed to summarize %s: %v", targetURL, err)
 			continue
 		}
 
-		// 4. Send to Slack
+		// Send to Slack
 		log.Printf("Sending to Slack...")
 		err = sendToSlack(conf, targetURL, summary)
 		if err != nil {
@@ -71,62 +54,50 @@ func main() {
 		}
 
 		log.Printf("Successfully processed: %s", targetURL)
-
-		// レート制限(429)を回避するためにウェイトを置く
-		log.Println("Waiting for next request...")
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 5)
 	}
 
 	log.Println("All tasks completed!")
 }
 
-func extractText(htmlStr string) string {
-	doc, err := html.Parse(strings.NewReader(htmlStr))
-	if err != nil {
-		return htmlStr
+func summarize(ctx context.Context, client *genai.Client, modelName, targetURL string) (string, error) {
+	// 日本時間 (JST) で前日の日付を基準とする
+	jst := time.FixedZone("Asia/Tokyo", 9*60*60)
+	yesterday := time.Now().In(jst).AddDate(0, 0, -1)
+	targetDateStr := yesterday.Format("2006/01/02")
+
+	prompt := fmt.Sprintf(`
+以下のURLにアクセスし、内容を読み取って【対象日: %s (JST)】のアップデート情報を抽出してまとめてください。
+
+## URL 
+%s
+
+## 指示
+1. 指定されたURLの内容（特に日付）を厳密に確認し、対象日（%s）と一致するアップデートのみを抽出してください。
+2. 対象日以外の情報は、たとえ記事内にあっても完全に無視してください。
+3. アップデートがある場合は以下のテンプレートで要約してください。
+4. 該当するアップデートが1件もない場合は、「%s のアップデート情報はありません。」とだけ出力してください。ただしサービス名は出力してください。
+5. Slackの "mrkdwn" 形式を使用し、見出し（#）は使わず太字（*テキスト*）を使用してください。
+
+## 出力テンプレート:
+[サービス名 (Google Cloud, AWS, Kubernetesなど)]
+%s のアップデートはn件です。
+---
+*アップデートタイトル* (公開日時/JST)
+• 要点1
+• 要点2
+• 要点3
+リンク: [セクションへのリンクURL]
+---
+`, targetDateStr, targetURL, targetDateStr, targetDateStr, targetDateStr)
+
+	// Google Searchツール (Grounding) を有効にする設定
+	cfg := &genai.GenerateContentConfig{
+		Tools: []*genai.Tool{
+			{GoogleSearch: &genai.GoogleSearch{}},
+		},
 	}
-
-	var f func(*html.Node)
-	var sb strings.Builder
-	f = func(n *html.Node) {
-		if n.Type == html.TextNode {
-			data := strings.TrimSpace(n.Data)
-			if data != "" {
-				sb.WriteString(data + " ")
-			}
-		}
-		if n.Type == html.ElementNode && (n.Data == "script" || n.Data == "style") {
-			return
-		}
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			f(c)
-		}
-	}
-	f(doc)
-	return sb.String()
-}
-
-func summarize(ctx context.Context, client *genai.Client, modelName, text string) (string, error) {
-	prompt := fmt.Sprintf(`以下はアップデート情報ページです。今日のアップデート内容を日本語で要約してください。
-## 制約事項:
-- Slackの "mrkdwn" 形式を使用してください。
-- 見出し（#）は使わず、太字（*テキスト*）を使用してください。
-- アップデート項目（クラウドサービス）毎に日時を記載してください。
-- アップデートは本日の内容だけで良いです。
-- 時間は日本時間（JST）で換算してください
-- アップデート項目の間はわかりやすいように罫線をいれてください。
-- 各アップデート情報のセクションへのリンクも記載してください。
-- アップデート情報の日付を必ず確認して、余計な情報は出さないでください。
-- アップデート情報を読んでどのサービスのアップデートなのかを最初に出力してください(Google Cloud, AWS, Kubernetesなど)。
-- アップデート情報がなければ「アップデート情報なし」と記載してください。
-- アップデート情報がある場合は「本日のアップデートはn件です」と表示してください。
-- 要点を箇書き（•）で3点程度にまとめてください。
-- 翻訳は自然な日本語で行ってください。
-
-内容:
-%s`, text)
-
-	result, err := client.Models.GenerateContent(ctx, modelName, genai.Text(prompt), nil)
+	result, err := client.Models.GenerateContent(ctx, modelName, genai.Text(prompt), cfg)
 	if err != nil {
 		return "", err
 	}

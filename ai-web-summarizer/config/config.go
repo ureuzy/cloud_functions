@@ -7,8 +7,8 @@ type Config struct {
 	Channel         string   `envconfig:"CHANNEL" required:"true"`
 	TargetURLs      []string `envconfig:"TARGET_URLS" required:"true"`
 	ProjectID       string   `envconfig:"PROJECT_ID" required:"true"`
-	Location        string   `envconfig:"LOCATION" default:"us-central1"`
-	ModelName       string   `envconfig:"GEMINI_MODEL" default:"gemini-1.5-flash"`
+	Location        string   `envconfig:"LOCATION" default:"global"`
+	ModelName       string   `envconfig:"GEMINI_MODEL" default:"gemini-3-flash-preview"`
 }
 
 func LoadConfig() (*Config, error) {
