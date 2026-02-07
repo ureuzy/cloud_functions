@@ -1,0 +1,39 @@
+steps:
+  # 1. Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_CONTAINER_NAME}:latest'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_CONTAINER_NAME}:${SHORT_SHA}'
+      - '.'
+    dir: 'billing-monitor'
+
+  # 2. Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '-a'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_CONTAINER_NAME}'
+
+  # 3. Create a release in Cloud Deploy
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'deploy'
+      - 'releases'
+      - 'create'
+      - 'release-${SHORT_SHA}'
+      - '--delivery-pipeline=${_PIPELINE_NAME}'
+      - '--region=${_REGION}'
+      - '--annotations=commit_sha=${SHORT_SHA}'
+      - '--images=billing-monitor-image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_CONTAINER_NAME}:${SHORT_SHA}'
+      - '--skaffold-file=skaffold.yaml'
+    dir: 'billing-monitor'
+
+images:
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_CONTAINER_NAME}:${SHORT_SHA}'
+
+options:
+  logging: 'CLOUD_LOGGING_ONLY'

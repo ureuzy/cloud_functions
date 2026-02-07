@@ -1,0 +1,24 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: billing-monitor
+spec:
+  template:
+    spec:
+      template:
+        spec:
+          containers:
+          - image: billing-monitor-image
+            env:
+            - name: CHANNEL
+              value: "#google_cloud"
+            - name: PROJECT_ID
+              value: "ureuzy-org-system"
+            - name: BILLING_TABLE
+              value: "ureuzy-org-system.gcp_billing_export.gcp_billing_export_v1_0180E6_1F523F_8A7E63" # 実際の名前に書き換えが必要
+            - name: SLACK_WEBHOOK
+              valueFrom:
+                secretKeyRef:
+                  key: latest
+                  name: slack-webhook
+          serviceAccountName: audit-alert@ureuzy-common.iam.gserviceaccount.com # BigQuery閲覧権限が必要

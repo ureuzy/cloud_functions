@@ -1,0 +1,18 @@
+package config
+
+import "github.com/kelseyhightower/envconfig"
+
+type Config struct {
+	SlackWebhookUrl string `envconfig:"SLACK_WEBHOOK" required:"true"`
+	Channel         string `envconfig:"CHANNEL" required:"true"`
+	ProjectID       string `envconfig:"PROJECT_ID" required:"true"`
+	BillingTable    string `envconfig:"BILLING_TABLE" required:"true"` // project.dataset.table
+}
+
+func LoadConfig() (*Config, error) {
+	var conf Config
+	if err := envconfig.Process("", &conf); err != nil {
+		return nil, err
+	}
+	return &conf, nil
+}

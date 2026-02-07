@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -56,15 +55,13 @@ func fetchCosts(ctx context.Context, conf *config.Config) (*CostData, error) {
 
 	jst := time.FixedZone("Asia/Tokyo", 9*60*60)
 	now := time.Now().In(jst)
-
-	weekAgoDate := now.AddDate(0, 0, -7).Format("2006-01-02")
 	monthStartDate := now.Format("2006-01-01")
 
 	queryStr := fmt.Sprintf(
-		"SELECT CAST(SUM(cost + (SELECT SUM(IFNULL(c.amount, 0)) FROM UNNEST(credits) c)) AS STRING) as cost, "+
-			"CAST(DATE(usage_start_time, 'Asia/Tokyo') AS STRING) as usage_date "+
-			"FROM `%s` "+
-			"WHERE DATE(usage_start_time, 'Asia/Tokyo') >= '%s' "+
+		"SELECT CAST(SUM(cost + (SELECT SUM(IFNULL(c.amount, 0)) FROM UNNEST(credits) c)) AS STRING) as cost, " +
+			"CAST(DATE(usage_start_time, 'Asia/Tokyo') AS STRING) as usage_date " +
+			"FROM `%s` " +
+			"WHERE DATE(usage_start_time, 'Asia/Tokyo') >= '%s' " +
 			"GROUP BY usage_date",
 		conf.BillingTable, monthStartDate,
 	)
@@ -74,11 +71,14 @@ func fetchCosts(ctx context.Context, conf *config.Config) (*CostData, error) {
 		Query:        queryStr,
 		UseLegacySql: &useLegacySql,
 	}).Context(ctx).Do()
-	
-	// データが0件、またはエラー（テーブル未作成など）の場合にダミーデータを使用
+
 	if err != nil || (res != nil && len(res.Rows) == 0) {
-		log.Printf("No real data available (err: %v), using dummy data.", err)
-		return getDummyData(), nil
+		log.Printf("No real data available (err: %v).", err)
+		return &CostData{
+			TotalMonth: 0,
+			DailyCosts: generateEmptyDailyCosts(now),
+		},
+	nil
 	}
 
 	var totalMonth float64
@@ -89,46 +89,35 @@ func fetchCosts(ctx context.Context, conf *config.Config) (*CostData, error) {
 		}
 		costStr, _ := row.F[0].V.(string)
 		usageDate, _ := row.F[1].V.(string)
-
 		c, _ := strconv.ParseFloat(costStr, 64)
 		totalMonth += c
-		if usageDate >= weekAgoDate {
-			dailyMap[usageDate] = c
-		}
+		dailyMap[usageDate] = c
 	}
 
 	var dailyCosts []DailyCost
-	for d, c := range dailyMap {
-		dailyCosts = append(dailyCosts, DailyCost{Date: d, Cost: c})
+	for i := 1; i <= 7; i++ {
+		d := now.AddDate(0, 0, -i).Format("2006-01-02")
+		cost := 0.0
+		if val, ok := dailyMap[d]; ok {
+			cost = val
+		}
+		dailyCosts = append(dailyCosts, DailyCost{Date: d, Cost: cost})
 	}
-	sort.Slice(dailyCosts, func(i, j int) bool {
-		return dailyCosts[i].Date > dailyCosts[j].Date
-	})
 
 	return &CostData{
 		TotalMonth: totalMonth,
 		DailyCosts: dailyCosts,
-	}, nil
+	},
+	nil
 }
 
-func getDummyData() *CostData {
-	jst := time.FixedZone("Asia/Tokyo", 9*60*60)
-	now := time.Now().In(jst)
+func generateEmptyDailyCosts(now time.Time) []DailyCost {
 	var dailyCosts []DailyCost
-	for i := 6; i >= 0; i-- {
+	for i := 1; i <= 7; i++ {
 		d := now.AddDate(0, 0, -i).Format("2006-01-02")
-		// プレビュー用に変化のあるダミー数値
-		c := float64(120 + (i * 45) + (time.Now().Nanosecond() % 100))
-		dailyCosts = append(dailyCosts, DailyCost{Date: d, Cost: c})
+		dailyCosts = append(dailyCosts, DailyCost{Date: d, Cost: 0})
 	}
-	// 日付順にソート（AddDateのループで生成しているので本来不要ですが念のため）
-	sort.Slice(dailyCosts, func(i, j int) bool {
-		return dailyCosts[i].Date > dailyCosts[j].Date
-	})
-	return &CostData{
-		TotalMonth: 15600.50,
-		DailyCosts: dailyCosts,
-	}
+	return dailyCosts
 }
 
 func sendToSlack(conf *config.Config, costs *CostData) error {
@@ -179,7 +168,6 @@ func createProgressBar(value, max float64, width int) string {
 	if filled < 0 {
 		filled = 0
 	}
-
 	res := ""
 	for i := 0; i < filled; i++ {
 		res += "█"
