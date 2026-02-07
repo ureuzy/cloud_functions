@@ -155,7 +155,7 @@ URL: %s
 }
 
 func postHeader(api *slack.Client, channel, targetURL string, resp *UpdateResponse) (string, error) {
-	headerText := fmt.Sprintf("*AI Update Report: %s*\n%s のアップデートは %d 件です。", resp.ServiceName, resp.UpdatesDate, len(resp.Updates))
+	headerText := fmt.Sprintf("*AI Update Report: [%s]*\n%s のアップデートは %d 件です。", resp.ServiceName, resp.UpdatesDate, len(resp.Updates))
 
 	var listItems []string
 	for i, item := range resp.Updates {
