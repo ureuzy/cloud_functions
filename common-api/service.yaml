@@ -16,8 +16,8 @@ spec:
         - name: PORT
           value: "8080"
         - name: BUCKET_NAME
-          value: "your-bucket-name"
+          value: "ureuzy-family-photos"
         - name: PROJECT_ID
-          value: "your-project-id"
+          value: "ureuzy-common"
         - name: FIREBASE_PROJECT_ID
-          value: "your-firebase-project-id"
+          value: "ureuzy"
