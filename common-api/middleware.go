@@ -31,8 +31,8 @@ func AuthMiddleware(app *firebase.App) gin.HandlerFunc {
 
 		token, err := client.VerifyIDToken(context.Background(), idToken)
 		if err != nil {
-			log.Printf("error verifying ID token: %v\n", err)
-			c.JSON(http.StatusUnauthorized, Response{Status: "error", Message: "Invalid token"})
+			log.Printf("error verifying ID token: %v. Token prefix: %s...", err, idToken[:10])
+			c.JSON(http.StatusUnauthorized, Response{Status: "error", Message: "Invalid token: " + err.Error()})
 			c.Abort()
 			return
 		}
