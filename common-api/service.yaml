@@ -1,0 +1,23 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: common-api
+  annotations:
+    run.googleapis.com/ingress: internal
+spec:
+  template:
+    spec:
+      serviceAccountName: common-api@ureuzy-common.iam.gserviceaccount.com
+      containers:
+      - image: common-api-image
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PORT
+          value: "8080"
+        - name: BUCKET_NAME
+          value: "your-bucket-name"
+        - name: PROJECT_ID
+          value: "your-project-id"
+        - name: FIREBASE_PROJECT_ID
+          value: "your-firebase-project-id"

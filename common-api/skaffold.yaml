@@ -1,0 +1,14 @@
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: common-api
+manifests:
+  rawYaml:
+  - service.yaml
+build:
+  artifacts:
+  - image: common-api-image
+    docker:
+      dockerfile: Dockerfile
+deploy:
+  cloudrun: {}
