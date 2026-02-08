@@ -11,8 +11,6 @@ spec:
       containers:
       - image: common-api-image
         env:
-        - name: PORT
-          value: "8080"
         - name: BUCKET_NAME
           value: "ureuzy-family-photos"
         - name: PROJECT_ID
