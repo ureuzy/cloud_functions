@@ -3,15 +3,13 @@ kind: Service
 metadata:
   name: common-api
   annotations:
-    run.googleapis.com/ingress: internal
+    run.googleapis.com/ingress: all
 spec:
   template:
     spec:
       serviceAccountName: common-api@ureuzy-common.iam.gserviceaccount.com
       containers:
       - image: common-api-image
-        ports:
-        - containerPort: 8080
         env:
         - name: PORT
           value: "8080"
