@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -10,6 +11,10 @@ import (
 type SchedulerHandler struct {
 	gcClient  *GoogleCloudClient
 	projectID string
+}
+
+type JobRequest struct {
+	Name string `json:"name" form:"name" binding:"required"`
 }
 
 func NewSchedulerHandler(gcClient *GoogleCloudClient, projectID string) *SchedulerHandler {
@@ -50,5 +55,59 @@ func (h *SchedulerHandler) ListJobs(c *gin.Context) {
 			"location":   location,
 			"jobs":       jobData,
 		},
+	})
+}
+
+func (h *SchedulerHandler) PauseJob(c *gin.Context) {
+	var req JobRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Status:  "error",
+			Message: "job name is required",
+		})
+		return
+	}
+
+	job, err := h.gcClient.PauseSchedulerJob(c.Request.Context(), req.Name)
+	if err != nil {
+		log.Printf("failed to pause scheduler job: %v", err)
+		c.JSON(http.StatusInternalServerError, Response{
+			Status:  "error",
+			Message: "failed to pause scheduler job",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Status:  "ok",
+		Message: fmt.Sprintf("job %s paused", job.GetName()),
+		Data:    job,
+	})
+}
+
+func (h *SchedulerHandler) ResumeJob(c *gin.Context) {
+	var req JobRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Status:  "error",
+			Message: "job name is required",
+		})
+		return
+	}
+
+	job, err := h.gcClient.ResumeSchedulerJob(c.Request.Context(), req.Name)
+	if err != nil {
+		log.Printf("failed to resume scheduler job: %v", err)
+		c.JSON(http.StatusInternalServerError, Response{
+			Status:  "error",
+			Message: "failed to resume scheduler job",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Status:  "ok",
+		Message: fmt.Sprintf("job %s resumed", job.GetName()),
+		Data:    job,
 	})
 }

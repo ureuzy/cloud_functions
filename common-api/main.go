@@ -65,6 +65,8 @@ func main() {
 		schedulerGroup := api.Group("/scheduler")
 		{
 			schedulerGroup.GET("/jobs", schedulerHandler.ListJobs)
+			schedulerGroup.POST("/pause", schedulerHandler.PauseJob)
+			schedulerGroup.POST("/resume", schedulerHandler.ResumeJob)
 		}
 
 		// Storageグループ

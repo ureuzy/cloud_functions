@@ -86,3 +86,19 @@ func (g *GoogleCloudClient) ListSchedulerJobs(ctx context.Context, location stri
 	}
 	return jobs, nil
 }
+
+// PauseSchedulerJob pauses a scheduler job
+func (g *GoogleCloudClient) PauseSchedulerJob(ctx context.Context, jobName string) (*schedulerpb.Job, error) {
+	req := &schedulerpb.PauseJobRequest{
+		Name: jobName,
+	}
+	return g.scheduler.PauseJob(ctx, req)
+}
+
+// ResumeSchedulerJob resumes a scheduler job
+func (g *GoogleCloudClient) ResumeSchedulerJob(ctx context.Context, jobName string) (*schedulerpb.Job, error) {
+	req := &schedulerpb.ResumeJobRequest{
+		Name: jobName,
+	}
+	return g.scheduler.ResumeJob(ctx, req)
+}
