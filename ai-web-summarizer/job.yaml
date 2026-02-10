@@ -21,7 +21,7 @@ spec:
             - name: GEMINI_MODEL
               value: "gemini-3-flash-preview"
             - name: DAYS_AGO
-              value: "2" # 何日前のリリースノートを取得するか（デフォルト: 1）
+              value: "3" # 何日前のリリースノートを取得するか（デフォルト: 1）
             - name: SLACK_BOT_TOKEN
               valueFrom:
                 secretKeyRef:
