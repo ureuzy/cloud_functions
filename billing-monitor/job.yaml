@@ -16,9 +16,9 @@ spec:
               value: "ureuzy-org-system"
             - name: BILLING_TABLE
               value: "ureuzy-org-system.gcp_billing_export.gcp_billing_export_v1_0180E6_1F523F_8A7E63" # 実際の名前に書き換えが必要
-            - name: SLACK_WEBHOOK
+            - name: SLACK_BOT_TOKEN
               valueFrom:
                 secretKeyRef:
                   key: latest
-                  name: slack-webhook
+                  name: slack-ai-bot
           serviceAccountName: billing-monitor@ureuzy-common.iam.gserviceaccount.com # BigQuery閲覧権限が必要
