@@ -12,17 +12,19 @@ spec:
             env:
             - name: CHANNEL
               value: "#news"
-            - name: TARGET_URLS
-              value: "https://docs.cloud.google.com/release-notes,https://aws.amazon.com/jp/new/,https://lwkd.info/feed.xml,https://blog.argoproj.io/" # プレースホルダー、実際にはカンマ区切りで指定可能
             - name: PROJECT_ID
-              value: "ureuzy-ai"
+              value: "ureuzy-ai" # Vertex AI用プロジェクトID
+            - name: BIGQUERY_PROJECT_ID
+              value: "ureuzy-common" # BigQuery用プロジェクトID
             - name: LOCATION
               value: "global"
             - name: GEMINI_MODEL
               value: "gemini-3-flash-preview"
+            - name: DAYS_AGO
+              value: "2" # 何日前のリリースノートを取得するか（デフォルト: 1）
             - name: SLACK_BOT_TOKEN
               valueFrom:
                 secretKeyRef:
                   key: latest
                   name: slack-ai-bot
-          serviceAccountName: ai-web-summarizer@ureuzy-common.iam.gserviceaccount.com # 既存のSAを流用（Vertex AI権限が必要）
+          serviceAccountName: ai-web-summarizer@ureuzy-common.iam.gserviceaccount.com # Vertex AI + BigQuery権限が必要
