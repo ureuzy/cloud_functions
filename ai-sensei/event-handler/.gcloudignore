@@ -1,0 +1,26 @@
+# Git files
+.git
+.gitignore
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Documentation
+README.md
+*.md
+
+# YAML config files (keep Dockerfile and service.yaml)
+!Dockerfile
+!service.yaml
