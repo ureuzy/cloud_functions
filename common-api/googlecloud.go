@@ -102,3 +102,11 @@ func (g *GoogleCloudClient) ResumeSchedulerJob(ctx context.Context, jobName stri
 	}
 	return g.scheduler.ResumeJob(ctx, req)
 }
+
+// RunSchedulerJob manually triggers a scheduler job
+func (g *GoogleCloudClient) RunSchedulerJob(ctx context.Context, jobName string) (*schedulerpb.Job, error) {
+	req := &schedulerpb.RunJobRequest{
+		Name: jobName,
+	}
+	return g.scheduler.RunJob(ctx, req)
+}

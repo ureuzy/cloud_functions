@@ -111,3 +111,30 @@ func (h *SchedulerHandler) ResumeJob(c *gin.Context) {
 		Data:    job,
 	})
 }
+
+func (h *SchedulerHandler) RunJob(c *gin.Context) {
+	var req JobRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Status:  "error",
+			Message: "job name is required",
+		})
+		return
+	}
+
+	job, err := h.gcClient.RunSchedulerJob(c.Request.Context(), req.Name)
+	if err != nil {
+		log.Printf("failed to run scheduler job: %v", err)
+		c.JSON(http.StatusInternalServerError, Response{
+			Status:  "error",
+			Message: "failed to run scheduler job",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Status:  "ok",
+		Message: fmt.Sprintf("job %s triggered", job.GetName()),
+		Data:    job,
+	})
+}

@@ -67,6 +67,7 @@ func main() {
 			schedulerGroup.GET("/jobs", schedulerHandler.ListJobs)
 			schedulerGroup.POST("/pause", schedulerHandler.PauseJob)
 			schedulerGroup.POST("/resume", schedulerHandler.ResumeJob)
+			schedulerGroup.POST("/run", schedulerHandler.RunJob)
 		}
 
 		// Storageグループ
