@@ -15,17 +15,17 @@ spec:
         - name: LOCATION
           value: "global"
         - name: GEMINI_MODEL
-          value: "gemini-1.5-pro"
+          value: "gemini-3-flash-preview"
         - name: MAX_RECENT_MESSAGES
           value: "10"
         - name: SLACK_BOT_TOKEN
           valueFrom:
             secretKeyRef:
               key: latest
-              name: slack-ai-bot
+              name: slack-sensei-bot
         - name: SLACK_SIGNING_SECRET
           valueFrom:
             secretKeyRef:
               key: latest
-              name: slack-signing-secret
+              name: slack-sensei-signing-secret
       serviceAccountName: ai-sensei@ureuzy-common.iam.gserviceaccount.com # Vertex AI + Firestore権限が必要
