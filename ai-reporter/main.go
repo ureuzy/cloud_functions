@@ -14,7 +14,7 @@ import (
 	"google.golang.org/api/iterator"
 	"google.golang.org/genai"
 
-	"github.com/ureuzy/cloud_functions/ai-web-summarizer/config"
+	"github.com/ureuzy/cloud_functions/ai-reporter/config"
 )
 
 // BigQueryから取得するリリースノートの構造

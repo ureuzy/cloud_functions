@@ -1,0 +1,30 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: ai-reporter
+  labels:
+    cloudprotos: "true"
+spec:
+  template:
+    spec:
+      template:
+        spec:
+          containers:
+            - image: ai-reporter-image
+              resources:
+                limits:
+                  cpu: 1000m
+                  memory: 512Mi
+              env:
+                - name: SLACK_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: slack-token
+                      key: latest
+                - name: SLACK_CHANNEL_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: slack-channel-id
+                      key: latest
+          maxRetries: 3
+          serviceAccountName: ai-reporter@ureuzy-common.iam.gserviceaccount.com # Vertex AI + BigQuery権限が必要

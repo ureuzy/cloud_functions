@@ -8,7 +8,7 @@ steps:
       - '-t'
       - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_CONTAINER_NAME}:${SHORT_SHA}'
       - '.'
-    dir: 'ai-web-summarizer'
+    dir: 'ai-reporter'
 
   # 2. Push the container image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
@@ -28,9 +28,9 @@ steps:
       - '--delivery-pipeline=${_PIPELINE_NAME}'
       - '--region=${_REGION}'
       - '--annotations=commit_sha=${SHORT_SHA}'
-      - '--images=ai-web-summarizer-image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_CONTAINER_NAME}:${SHORT_SHA}'
+      - '--images=ai-reporter-image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_CONTAINER_NAME}:${SHORT_SHA}'
       - '--skaffold-file=skaffold.yaml'
-    dir: 'ai-web-summarizer'
+    dir: 'ai-reporter'
 
 images:
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_CONTAINER_NAME}:${SHORT_SHA}'

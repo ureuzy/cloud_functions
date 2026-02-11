@@ -1,4 +1,4 @@
-module github.com/ureuzy/cloud_functions/ai-web-summarizer
+module github.com/ureuzy/cloud_functions/ai-reporter
 
 go 1.24.0
 

@@ -1,0 +1,12 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: ai-reporter
+build:
+  artifacts:
+    - image: ai-reporter-image
+      docker:
+        dockerfile: Dockerfile
+manifests:
+  rawYaml:
+    - job.yaml

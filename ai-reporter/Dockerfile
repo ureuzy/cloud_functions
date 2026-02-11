@@ -8,11 +8,11 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -v -o ai-web-summarizer .
+RUN CGO_ENABLED=0 GOOS=linux go build -v -o ai-reporter .
 
 # 実行ステージ
 FROM gcr.io/distroless/static-debian12
 
-COPY --from=builder /app/ai-web-summarizer /ai-web-summarizer
+COPY --from=builder /app/ai-reporter /ai-reporter
 
-ENTRYPOINT ["/ai-web-summarizer"]
+ENTRYPOINT ["/ai-reporter"]
