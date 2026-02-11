@@ -57,7 +57,7 @@ Firestore:
 ### 2. Google Cloud Secretsに保存
 ```bash
 # Slack Bot Token
-echo -n "xoxb-your-token" | gcloud secrets create slack-ai-bot --data-file=-
+echo -n "xoxb-your-token" | gcloud secrets create slack-sensei-bot --data-file=-
 
 # Slack Signing Secret
 echo -n "your-signing-secret" | gcloud secrets create slack-signing-secret --data-file=-
@@ -80,7 +80,7 @@ gcloud projects add-iam-policy-binding ureuzy-ai \
   --role="roles/datastore.user"
 
 # Secret Accessor権限
-gcloud secrets add-iam-policy-binding slack-ai-bot \
+gcloud secrets add-iam-policy-binding slack-sensei-bot \
   --member="serviceAccount:ai-sensei@ureuzy-common.iam.gserviceaccount.com" \
   --role="roles/secretmanager.secretAccessor"
 
@@ -104,7 +104,7 @@ gcloud run jobs create ai-sensei-daily-poster \
   --region asia-northeast1 \
   --service-account ai-sensei@ureuzy-common.iam.gserviceaccount.com \
   --set-env-vars CHANNEL=#ai-sensei,PROJECT_ID=ureuzy-ai,LOCATION=global,GEMINI_MODEL=gemini-1.5-pro \
-  --set-secrets SLACK_BOT_TOKEN=slack-ai-bot:latest
+  --set-secrets SLACK_BOT_TOKEN=slack-sensei-bot:latest
 
 # スケジュール設定（毎日9:00 JST）
 gcloud scheduler jobs create http ai-sensei-daily \
@@ -129,7 +129,7 @@ gcloud run deploy ai-sensei-event-handler \
   --region asia-northeast1 \
   --service-account ai-sensei@ureuzy-common.iam.gserviceaccount.com \
   --set-env-vars PROJECT_ID=ureuzy-ai,LOCATION=global,GEMINI_MODEL=gemini-1.5-pro,MAX_RECENT_MESSAGES=10 \
-  --set-secrets SLACK_BOT_TOKEN=slack-ai-bot:latest,SLACK_SIGNING_SECRET=slack-signing-secret:latest \
+  --set-secrets SLACK_BOT_TOKEN=slack-sensei-bot:latest,SLACK_SIGNING_SECRET=slack-signing-secret:latest \
   --allow-unauthenticated
 ```
 
