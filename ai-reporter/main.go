@@ -5,12 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
+	"math/rand"
 	"strings"
 	"time"
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/civil"
 	"github.com/slack-go/slack"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iterator"
 	"google.golang.org/genai"
 
@@ -158,13 +161,17 @@ func main() {
 
 	// 2. 各製品ごとにスレッドに投稿
 	processedCount := 0
+	var processingErrors []error
+
 	for productName, productNotes := range notesByProduct {
 		log.Printf("Processing product: %s (%d notes)", productName, len(productNotes))
 
 		// Geminiで要約
 		updateResp, err := summarizeReleaseNotes(ctx, genaiClient, conf.ModelName, productNotes, targetDateStr, productName)
 		if err != nil {
-			log.Printf("Failed to summarize release notes for %s: %v", productName, err)
+			errMsg := fmt.Errorf("failed to summarize release notes for %s: %w", productName, err)
+			log.Printf("Error: %v", errMsg)
+			processingErrors = append(processingErrors, errMsg)
 			continue
 		}
 
@@ -174,7 +181,7 @@ func main() {
 		}
 
 		// 製品のヘッダーをスレッドに投稿（Blocksを使用）
-		productHeaderText := fmt.Sprintf("📦 *%s*\n_%s のアップデート: %d 件_", productName, targetDateStr, len(updateResp.Updates))
+		productHeaderText := fmt.Sprintf("📦 *%s* (_アップデート: %d 件_)", productName, len(updateResp.Updates))
 
 		var productListItems []string
 		for i, item := range updateResp.Updates {
@@ -204,7 +211,9 @@ func main() {
 			}),
 		)
 		if err != nil {
-			log.Printf("Failed to post product header for %s: %v", productName, err)
+			errMsg := fmt.Errorf("failed to post product header for %s: %w", productName, err)
+			log.Printf("Error: %v", errMsg)
+			processingErrors = append(processingErrors, errMsg)
 			continue
 		}
 
@@ -212,7 +221,9 @@ func main() {
 		for _, item := range updateResp.Updates {
 			err := postDetailToThread(slackClient, conf.Channel, mainThreadTs, item)
 			if err != nil {
-				log.Printf("Failed to post detail to thread: %v", err)
+				errMsg := fmt.Errorf("failed to post detail to thread for %s: %w", productName, err)
+				log.Printf("Error: %v", errMsg)
+				processingErrors = append(processingErrors, errMsg)
 			}
 			// Rate limit protection
 			time.Sleep(time.Second * 1)
@@ -226,7 +237,46 @@ func main() {
 	}
 
 	log.Printf("Successfully processed %d products with %d total release notes!", processedCount, len(notes))
-	log.Println("All tasks completed!")
+
+	// エラーがあれば終了コードを返す
+	if len(processingErrors) > 0 {
+		log.Printf("Encountered %d errors during processing:", len(processingErrors))
+		for i, err := range processingErrors {
+			log.Printf("  %d. %v", i+1, err)
+		}
+		log.Fatalf("Job failed with %d errors", len(processingErrors))
+	}
+
+	log.Println("All tasks completed successfully!")
+}
+
+// retryWithExponentialBackoff executes a function with exponential backoff for 429 errors
+func retryWithExponentialBackoff(ctx context.Context, maxRetries int, fn func() error) error {
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		err := fn()
+		if err == nil {
+			return nil
+		}
+
+		// Check if it's a 429 error
+		if apiErr, ok := err.(*googleapi.Error); ok && apiErr.Code == 429 {
+			if attempt < maxRetries-1 {
+				// Calculate backoff duration with jitter
+				backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
+				jitter := time.Duration(rand.Int63n(int64(time.Second)))
+				waitDuration := backoff + jitter
+
+				log.Printf("Received 429 error, retrying after %v (attempt %d/%d)", waitDuration, attempt+1, maxRetries)
+				time.Sleep(waitDuration)
+				continue
+			}
+		}
+
+		// For non-429 errors or last attempt, return the error
+		return err
+	}
+
+	return fmt.Errorf("max retries exceeded")
 }
 
 func summarizeReleaseNotes(ctx context.Context, client *genai.Client, modelName string, notes []ReleaseNote, targetDate string, productName string) (*UpdateResponse, error) {
@@ -278,16 +328,24 @@ func summarizeReleaseNotes(ctx context.Context, client *genai.Client, modelName 
 		ResponseMIMEType: "application/json",
 	}
 
-	result, err := client.Models.GenerateContent(ctx, modelName, genai.Text(prompt), cfg)
+	var result *genai.GenerateContentResponse
+	var resp UpdateResponse
+
+	// Retry with exponential backoff for 429 errors
+	err = retryWithExponentialBackoff(ctx, 5, func() error {
+		var genErr error
+		result, genErr = client.Models.GenerateContent(ctx, modelName, genai.Text(prompt), cfg)
+		return genErr
+	})
+
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed after retries: %w", err)
 	}
 
 	if len(result.Candidates) == 0 || result.Candidates[0].Content == nil || len(result.Candidates[0].Content.Parts) == 0 {
 		return nil, fmt.Errorf("no content generated")
 	}
 
-	var resp UpdateResponse
 	err = json.Unmarshal([]byte(result.Candidates[0].Content.Parts[0].Text), &resp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON: %v, raw: %s", err, result.Candidates[0].Content.Parts[0].Text)
@@ -298,7 +356,7 @@ func summarizeReleaseNotes(ctx context.Context, client *genai.Client, modelName 
 
 func postDetailToThread(api *slack.Client, channel, threadTs string, item UpdateItem) error {
 	// タイトルと日付
-	titleText := fmt.Sprintf("*%s*\n`%s`", item.Title, item.Date)
+	titleText := fmt.Sprintf("*%s*", item.Title)
 
 	// サマリーを箇条書きに
 	var summaryItems []string

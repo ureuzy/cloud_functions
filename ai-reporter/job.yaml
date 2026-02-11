@@ -27,4 +27,5 @@ spec:
                 secretKeyRef:
                   key: latest
                   name: slack-ai-bot
+          timeoutSeconds: "1200"
           serviceAccountName: ai-reporter@ureuzy-common.iam.gserviceaccount.com # Vertex AI + BigQuery権限が必要
