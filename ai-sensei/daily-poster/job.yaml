@@ -1,0 +1,26 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: ai-sensei-daily-poster
+spec:
+  template:
+    spec:
+      template:
+        spec:
+          containers:
+          - image: daily-poster-image
+            env:
+            - name: CHANNEL
+              value: "#ai-sensei"
+            - name: PROJECT_ID
+              value: "ureuzy-ai" # Vertex AI用プロジェクトID
+            - name: LOCATION
+              value: "global"
+            - name: GEMINI_MODEL
+              value: "gemini-1.5-pro"
+            - name: SLACK_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: latest
+                  name: slack-ai-bot
+          serviceAccountName: ai-sensei@ureuzy-common.iam.gserviceaccount.com # Vertex AI権限が必要

@@ -1,0 +1,31 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: ai-sensei-event-handler
+spec:
+  template:
+    spec:
+      containers:
+      - image: event-handler-image
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PROJECT_ID
+          value: "ureuzy-ai" # Vertex AI & Firestore用プロジェクトID
+        - name: LOCATION
+          value: "global"
+        - name: GEMINI_MODEL
+          value: "gemini-1.5-pro"
+        - name: MAX_RECENT_MESSAGES
+          value: "10"
+        - name: SLACK_BOT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: slack-ai-bot
+        - name: SLACK_SIGNING_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: slack-signing-secret
+      serviceAccountName: ai-sensei@ureuzy-common.iam.gserviceaccount.com # Vertex AI + Firestore権限が必要
