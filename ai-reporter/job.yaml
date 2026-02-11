@@ -2,29 +2,29 @@ apiVersion: run.googleapis.com/v1
 kind: Job
 metadata:
   name: ai-reporter
-  labels:
-    cloudprotos: "true"
 spec:
   template:
     spec:
       template:
         spec:
           containers:
-            - image: ai-reporter-image
-              resources:
-                limits:
-                  cpu: 1000m
-                  memory: 512Mi
-              env:
-                - name: SLACK_TOKEN
-                  valueFrom:
-                    secretKeyRef:
-                      name: slack-token
-                      key: latest
-                - name: SLACK_CHANNEL_ID
-                  valueFrom:
-                    secretKeyRef:
-                      name: slack-channel-id
-                      key: latest
-          maxRetries: 3
+          - image: ai-reporter-image
+            env:
+            - name: CHANNEL
+              value: "#news"
+            - name: PROJECT_ID
+              value: "ureuzy-ai" # Vertex AI用プロジェクトID
+            - name: BIGQUERY_PROJECT_ID
+              value: "ureuzy-common" # BigQuery用プロジェクトID
+            - name: LOCATION
+              value: "global"
+            - name: GEMINI_MODEL
+              value: "gemini-3-flash-preview"
+            - name: DAYS_AGO
+              value: "3" # 何日前のリリースノートを取得するか（デフォルト: 1）
+            - name: SLACK_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: latest
+                  name: slack-ai-bot
           serviceAccountName: ai-reporter@ureuzy-common.iam.gserviceaccount.com # Vertex AI + BigQuery権限が必要
