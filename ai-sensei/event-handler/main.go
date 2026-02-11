@@ -152,10 +152,46 @@ func (s *Server) handleInteractiveComponents(c *gin.Context) {
 			switch action.ActionID {
 			case "start_learning":
 				topic := action.Value
-				go s.startLearningSession(payload.Channel.ID, payload.MessageTs, topic)
+				messageTs := payload.Message.Timestamp
+				log.Printf("Button clicked - Channel: %s, MessageTs: %s, Topic: %s", payload.Channel.ID, messageTs, topic)
+
+				// Remove action block (buttons) from the message and add started message
+				var updatedBlocks []slack.Block
+				for _, block := range payload.Message.Blocks.BlockSet {
+					// Skip the action block
+					if block.BlockType() != slack.MBTAction {
+						updatedBlocks = append(updatedBlocks, block)
+					}
+				}
+
+				// Add "学習を開始しました！" message
+				startedBlock := slack.NewSectionBlock(
+					slack.NewTextBlockObject("mrkdwn", "✅ *学習を開始しました！*", false, false),
+					nil,
+					nil,
+				)
+				updatedBlocks = append(updatedBlocks, startedBlock)
+
+				_, _, _, err := s.slackClient.UpdateMessage(
+					payload.Channel.ID,
+					messageTs,
+					slack.MsgOptionBlocks(updatedBlocks...),
+				)
+				if err != nil {
+					log.Printf("Failed to update message: %v", err)
+				}
+
+				go s.startLearningSession(payload.Channel.ID, messageTs, topic)
 			case "skip_topic":
-				// Just acknowledge
-				log.Printf("Topic skipped: %s", action.Value)
+				topic := action.Value
+				messageTs := payload.Message.Timestamp
+				log.Printf("Topic skipped: %s", topic)
+
+				// Delete the message
+				_, _, err := s.slackClient.DeleteMessage(payload.Channel.ID, messageTs)
+				if err != nil {
+					log.Printf("Failed to delete message: %v", err)
+				}
 			}
 		}
 	}
