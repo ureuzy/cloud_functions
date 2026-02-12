@@ -3,8 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+	"math"
+	"math/rand"
 	"strings"
+	"time"
 
+	"google.golang.org/api/googleapi"
 	"google.golang.org/genai"
 )
 
@@ -27,6 +32,32 @@ func NewGeminiClient(ctx context.Context, projectID, location, modelName string)
 		client:    client,
 		modelName: modelName,
 	}, nil
+}
+
+// retryWithExponentialBackoff retries a function with exponential backoff on 429 errors
+func retryWithExponentialBackoff(ctx context.Context, maxRetries int, fn func() error) error {
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		err := fn()
+		if err == nil {
+			return nil
+		}
+
+		// Check if it's a 429 error
+		if apiErr, ok := err.(*googleapi.Error); ok && apiErr.Code == 429 {
+			if attempt < maxRetries-1 {
+				backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
+				jitter := time.Duration(rand.Int63n(int64(time.Second)))
+				waitDuration := backoff + jitter
+				log.Printf("Received 429 error, retrying after %v (attempt %d/%d)", waitDuration, attempt+1, maxRetries)
+				time.Sleep(waitDuration)
+				continue
+			}
+		}
+
+		return err
+	}
+
+	return fmt.Errorf("max retries exceeded")
 }
 
 // StartLecture generates the first lecture message for a topic
@@ -63,7 +94,12 @@ func (g *GeminiClient) StartLecture(ctx context.Context, topic string) (string, 
 
 ここまでで質問はありますか？」`, topic, topic)
 
-	result, err := g.client.Models.GenerateContent(ctx, g.modelName, genai.Text(prompt), nil)
+	var result *genai.GenerateContentResponse
+	err := retryWithExponentialBackoff(ctx, 5, func() error {
+		var genErr error
+		result, genErr = g.client.Models.GenerateContent(ctx, g.modelName, genai.Text(prompt), nil)
+		return genErr
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to generate content: %v", err)
 	}
@@ -120,7 +156,12 @@ func (g *GeminiClient) ContinueLecture(ctx context.Context, topic, summary strin
 	conversationHistory.WriteString(fmt.Sprintf("学習者: %s\n\n", userMessage))
 	conversationHistory.WriteString("あなた（教師）の返答:")
 
-	result, err := g.client.Models.GenerateContent(ctx, g.modelName, genai.Text(conversationHistory.String()), nil)
+	var result *genai.GenerateContentResponse
+	err := retryWithExponentialBackoff(ctx, 5, func() error {
+		var genErr error
+		result, genErr = g.client.Models.GenerateContent(ctx, g.modelName, genai.Text(conversationHistory.String()), nil)
+		return genErr
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to generate content: %v", err)
 	}
