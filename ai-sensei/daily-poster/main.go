@@ -37,8 +37,22 @@ func main() {
 		log.Fatalf("Failed to create GenAI client: %v", err)
 	}
 
+	// Firestore クライアント初期化
+	firestoreClient, err := NewFirestoreClient(ctx, conf.ProjectID)
+	if err != nil {
+		log.Fatalf("Failed to create Firestore client: %v", err)
+	}
+	defer firestoreClient.Close()
+
+	// 過去14日分のレッスン履歴を取得
+	recentLessons, err := firestoreClient.GetRecentLessons(ctx, 14)
+	if err != nil {
+		log.Fatalf("Failed to get recent lessons: %v", err)
+	}
+	log.Printf("Found %d recent lessons", len(recentLessons))
+
 	// Gemini で今日のトピックを選定
-	topic, err := selectDailyTopic(ctx, genaiClient, conf.ModelName)
+	topic, err := selectDailyTopic(ctx, genaiClient, conf.ModelName, recentLessons)
 	if err != nil {
 		log.Fatalf("Failed to select daily topic: %v", err)
 	}
@@ -52,14 +66,31 @@ func main() {
 		log.Fatalf("Failed to post to Slack: %v", err)
 	}
 
+	// 選定したトピックをFirestoreに保存
+	err = firestoreClient.SaveLesson(ctx, topic.Topic)
+	if err != nil {
+		log.Printf("Warning: Failed to save lesson to Firestore: %v", err)
+	}
+
 	log.Println("Daily topic posted successfully!")
 }
 
-func selectDailyTopic(ctx context.Context, client *genai.Client, modelName string) (*TopicSuggestion, error) {
+func selectDailyTopic(ctx context.Context, client *genai.Client, modelName string, recentLessons []LessonHistory) (*TopicSuggestion, error) {
 	currentDate := time.Now().Format("2006-01-02")
+
+	// 最近のトピックリストを作成
+	var recentTopicsText string
+	if len(recentLessons) > 0 {
+		recentTopicsText = "\n## 最近行った授業（これらと同じ具体的なトピックは避けてください）\n"
+		for _, lesson := range recentLessons {
+			recentTopicsText += fmt.Sprintf("- %s (%s)\n", lesson.Topic, lesson.Date.Format("2006-01-02"))
+		}
+		recentTopicsText += "\n注意: 大枠のカテゴリ（コンテナ技術、ネットワーク、セキュリティなど）が重複するのは問題ありません。具体的なトピックが違えばOKです。\n"
+	}
+
 	prompt := fmt.Sprintf(`あなたはSRE/Platform Engineeringの専門家です。
 毎日1つ、学習者が深く学ぶべき技術トピックを提案してください。
-
+%s
 ## 重要: 多様性を重視
 - **毎回異なるカテゴリから選定すること**（コンテナ、ネットワーク、認証、CI/CD、可観測性など）
 - 同じジャンルが連続しないようにランダムに選ぶこと
@@ -92,7 +123,7 @@ func selectDailyTopic(ctx context.Context, client *genai.Client, modelName strin
 
 今日のトピックを1つ、ランダムに異なるカテゴリから提案してください。
 
-今日の日付: %s`, currentDate)
+今日の日付: %s`, recentTopicsText, currentDate)
 
 	cfg := &genai.GenerateContentConfig{
 		ResponseMIMEType: "application/json",
