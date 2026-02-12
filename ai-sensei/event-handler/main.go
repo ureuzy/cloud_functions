@@ -187,8 +187,15 @@ func (s *Server) handleInteractiveComponents(c *gin.Context) {
 				messageTs := payload.Message.Timestamp
 				log.Printf("Topic skipped: %s", topic)
 
+				// Delete the lesson from Firestore
+				ctx := context.Background()
+				err := s.firestoreClient.DeleteRecentLesson(ctx, topic)
+				if err != nil {
+					log.Printf("Failed to delete lesson from Firestore: %v", err)
+				}
+
 				// Delete the message
-				_, _, err := s.slackClient.DeleteMessage(payload.Channel.ID, messageTs)
+				_, _, err = s.slackClient.DeleteMessage(payload.Channel.ID, messageTs)
 				if err != nil {
 					log.Printf("Failed to delete message: %v", err)
 				}

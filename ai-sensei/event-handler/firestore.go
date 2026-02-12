@@ -145,3 +145,47 @@ func (f *FirestoreClient) UpdateSummary(ctx context.Context, threadTs, summary s
 	})
 	return err
 }
+
+// DeleteRecentLesson deletes the most recent lesson with the given topic from ai_sensei_lessons
+func (f *FirestoreClient) DeleteRecentLesson(ctx context.Context, topic string) error {
+	// Query for all lessons with this topic (without OrderBy to avoid composite index)
+	iter := f.client.Collection("ai_sensei_lessons").
+		Where("topic", "==", topic).
+		Documents(ctx)
+
+	// Find the most recent one
+	var mostRecentDoc *firestore.DocumentSnapshot
+	var mostRecentTime time.Time
+
+	for {
+		doc, err := iter.Next()
+		if err != nil {
+			break
+		}
+
+		var lesson struct {
+			Date  time.Time `firestore:"date"`
+			Topic string    `firestore:"topic"`
+		}
+		if err := doc.DataTo(&lesson); err != nil {
+			continue
+		}
+
+		if mostRecentDoc == nil || lesson.Date.After(mostRecentTime) {
+			mostRecentDoc = doc
+			mostRecentTime = lesson.Date
+		}
+	}
+
+	if mostRecentDoc == nil {
+		return fmt.Errorf("no lesson found with topic: %s", topic)
+	}
+
+	// Delete the most recent document
+	_, err := mostRecentDoc.Ref.Delete(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to delete lesson: %w", err)
+	}
+
+	return nil
+}
