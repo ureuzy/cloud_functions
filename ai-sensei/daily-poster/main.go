@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/slack-go/slack"
 	"google.golang.org/genai"
@@ -55,24 +56,33 @@ func main() {
 }
 
 func selectDailyTopic(ctx context.Context, client *genai.Client, modelName string) (*TopicSuggestion, error) {
-	prompt := `あなたはSRE/Platform Engineeringの専門家です。
+	currentDate := time.Now().Format("2006-01-02")
+	prompt := fmt.Sprintf(`あなたはSRE/Platform Engineeringの専門家です。
 毎日1つ、学習者が深く学ぶべき技術トピックを提案してください。
+
+## 重要: 多様性を重視
+- **毎回異なるカテゴリから選定すること**（コンテナ、ネットワーク、認証、CI/CD、可観測性など）
+- 同じジャンルが連続しないようにランダムに選ぶこと
+- 幅広い技術領域をカバーすること
 
 ## 選定基準
 - **非常に具体的で深い技術トピック**であること（広範なトピックは避ける）
 - SRE/Platform Engineering/インフラエンジニアに実務で役立つこと
 - 実践的な演習が可能なこと
 
-## トピック例（これらに限らず、同レベルの深さのトピックを選定）
-- 認証・認可: OIDC, SAML, mTLS, OAuth 2.0 フロー
-- コンテナ技術: Linux Namespace, cgroups, overlay filesystem, OCI Image仕様
-- ネットワーク: DNS の詳細動作, HTTP/3, QUIC, BGP, VXLAN
-- セキュリティ: TLS 1.3 ハンドシェイク, 暗号化アルゴリズム, PKI
-- プロトコル: gRPC ストリーミング, WebSocket, Server-Sent Events
-- 可観測性: OpenTelemetry, eBPF, メトリクス収集の仕組み
-- CI/CD: Tekton Pipeline, ArgoCD Sync, GitOps ワークフロー
-- Kubernetes: CNI プラグイン, Admission Webhook, Custom Scheduler
-- ストレージ: CSI ドライバ, etcd の RAFT, Distributed Consensus
+## トピック例（多様なカテゴリから1つ選定。あくまで例なので関連しそうな技術であればOKです）
+- 認証・認可: OIDC, SAML, mTLS, OAuth 2.0 フロー, JWT, Keycloak
+- コンテナ技術: Linux Namespace, cgroups, overlay filesystem, OCI Image仕様, runc
+- ネットワーク: DNS の詳細動作, HTTP/3, QUIC, BGP, VXLAN, iptables, eBPF XDP
+- セキュリティ: TLS 1.3 ハンドシェイク, 暗号化アルゴリズム, PKI, Vault, RBAC
+- プロトコル: gRPC ストリーミング, WebSocket, Server-Sent Events, MQTT
+- 可観測性: OpenTelemetry, eBPF, Prometheus, Grafana Loki, Distributed Tracing
+- CI/CD: Tekton Pipeline, ArgoCD Sync, GitOps, GitHub Actions, Spinnaker
+- Kubernetes: CNI プラグイン, Admission Webhook, Custom Scheduler, CRD, Operator Pattern
+- ストレージ: CSI ドライバ, etcd の RAFT, Distributed Consensus, Ceph, MinIO
+- クラウド: AWS IAM Policy, GCP Service Account, Terraform State, CloudFormation
+- データベース: PostgreSQL WAL, MySQL Replication, Redis Cluster, CockroachDB
+- メッセージング: Kafka Partition, RabbitMQ Clustering, Pub/Sub, NATS JetStream
 
 ## 出力形式
 {
@@ -80,10 +90,13 @@ func selectDailyTopic(ctx context.Context, client *genai.Client, modelName strin
   "description": "このトピックで何を学ぶか（2-3行の説明）"
 }
 
-今日のトピックを1つ提案してください。`
+今日のトピックを1つ、ランダムに異なるカテゴリから提案してください。
+
+今日の日付: %s`, currentDate)
 
 	cfg := &genai.GenerateContentConfig{
 		ResponseMIMEType: "application/json",
+		Temperature:      genai.Ptr(float32(1.5)), // 高いランダム性
 	}
 
 	result, err := client.Models.GenerateContent(ctx, modelName, genai.Text(prompt), cfg)

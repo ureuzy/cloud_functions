@@ -71,7 +71,6 @@ func (g *GeminiClient) StartLecture(ctx context.Context, topic string) (string, 
 3. **ステップバイステップ**: 一度に全部教えず、1ステップずつ進める
 4. **実践重視**: コマンドを実行させたり、設定を試させたり、手を動かしてもらう
 5. **結果を待つ**: 「試してみて、結果を貼り付けてください」と促して待つ
-6. **質問タイムを設ける**: 各ステップの後に必ず「ここまでで質問はありますか？」と尋ねる
 
 ## 最初のメッセージの構成
 まず今回の講義の簡単なアジェンダ（3-5ステップ）を箇条書きで共有してください。
@@ -90,9 +89,7 @@ func (g *GeminiClient) StartLecture(ctx context.Context, topic string) (string, 
 〇〇を確認するために、次のコマンドを実行してみてください:
 [コマンド]
 
-実行したら、結果を貼り付けてくださいね！
-
-ここまでで質問はありますか？」`, topic, topic)
+実行したら、結果を貼り付けてくださいね！」`, topic, topic)
 
 	var result *genai.GenerateContentResponse
 	err := retryWithExponentialBackoff(ctx, 5, func() error {
@@ -127,11 +124,9 @@ func (g *GeminiClient) ContinueLecture(ctx context.Context, topic, summary strin
 4. **実践重視**: コマンドを実行させたり、設定を試させたり、手を動かしてもらう
 5. **結果を確認**: 学習者が貼り付けた結果を確認し、次のステップに進む
 6. **質問に答える**: 学習者の質問には丁寧に答え、理解度を確認してから次へ
-7. **質問タイムを設ける**: 各ステップの後に必ず「ここまでで質問はありますか？」と尋ねる
 
 学習者の返答を見て、次に何をすべきか1つだけ指示してください。
 長い説明は避け、「次は〇〇を試してみましょう」と促すスタイルで。
-各ステップの最後には必ず「ここまでで質問はありますか？」と追加してください。
 
 `, topic))
 
