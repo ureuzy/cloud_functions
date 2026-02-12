@@ -70,38 +70,59 @@ func (f *FirestoreClient) CreateThread(ctx context.Context, threadTs, topic stri
 }
 
 // AddMessage adds a message to the thread
-func (f *FirestoreClient) AddMessage(ctx context.Context, threadTs string, role, content string, maxRecentMessages int) error {
+func (f *FirestoreClient) AddMessage(ctx context.Context, threadTs string, role, content string, maxRecentMessages int, geminiClient *GeminiClient) error {
 	docRef := f.client.Collection("ai_sensei_threads").Doc(threadTs)
 
+	// まずトランザクション外でスレッドデータを取得
+	doc, err := docRef.Get(ctx)
+	if err != nil {
+		return err
+	}
+
+	var thread ConversationThread
+	if err := doc.DataTo(&thread); err != nil {
+		return err
+	}
+
+	// 新しいメッセージを追加
+	newMessage := Message{
+		Role:      role,
+		Content:   content,
+		Timestamp: time.Now(),
+	}
+
+	thread.RecentMessages = append(thread.RecentMessages, newMessage)
+
+	// 最新N件のみ保持し、古いメッセージは要約に含める
+	if len(thread.RecentMessages) > maxRecentMessages {
+		// 削除される古いメッセージを取得
+		numToRemove := len(thread.RecentMessages) - maxRecentMessages
+		oldMessages := thread.RecentMessages[:numToRemove]
+
+		// Geminiで要約生成（トランザクション外で実行）
+		if geminiClient != nil {
+			newSummary, err := geminiClient.SummarizeMessages(ctx, thread.Topic, oldMessages)
+			if err != nil {
+				// 要約失敗時はログを出して続行（古いメッセージは削除）
+				fmt.Printf("Failed to summarize messages: %v\n", err)
+			} else {
+				// 既存の要約と新しい要約を結合
+				if thread.Summary == "" {
+					thread.Summary = newSummary
+				} else {
+					thread.Summary = thread.Summary + "\n\n" + newSummary
+				}
+			}
+		}
+
+		// 古いメッセージを削除
+		thread.RecentMessages = thread.RecentMessages[numToRemove:]
+	}
+
+	thread.UpdatedAt = time.Now()
+
+	// トランザクションで更新
 	return f.client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
-		doc, err := tx.Get(docRef)
-		if err != nil {
-			return err
-		}
-
-		var thread ConversationThread
-		if err := doc.DataTo(&thread); err != nil {
-			return err
-		}
-
-		// 新しいメッセージを追加
-		newMessage := Message{
-			Role:      role,
-			Content:   content,
-			Timestamp: time.Now(),
-		}
-
-		thread.RecentMessages = append(thread.RecentMessages, newMessage)
-
-		// 最新N件のみ保持し、古いメッセージは要約に含める
-		if len(thread.RecentMessages) > maxRecentMessages {
-			// 要約が必要（TODO: Geminiで要約生成）
-			// 今はシンプルに古いメッセージを削除
-			thread.RecentMessages = thread.RecentMessages[len(thread.RecentMessages)-maxRecentMessages:]
-		}
-
-		thread.UpdatedAt = time.Now()
-
 		return tx.Set(docRef, thread)
 	})
 }

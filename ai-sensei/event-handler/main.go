@@ -218,7 +218,7 @@ func (s *Server) startLearningSession(channel, messageTs, topic string) {
 	}
 
 	// Save to Firestore
-	err = s.firestoreClient.AddMessage(ctx, messageTs, "model", lecture, s.config.MaxRecentMessages)
+	err = s.firestoreClient.AddMessage(ctx, messageTs, "model", lecture, s.config.MaxRecentMessages, s.geminiClient)
 	if err != nil {
 		log.Printf("Failed to save message: %v", err)
 	}
@@ -273,7 +273,7 @@ func (s *Server) handleThreadMessage(ev interface{}) {
 	}
 
 	// Save user message
-	err = s.firestoreClient.AddMessage(ctx, threadTs, "user", userMessage, s.config.MaxRecentMessages)
+	err = s.firestoreClient.AddMessage(ctx, threadTs, "user", userMessage, s.config.MaxRecentMessages, s.geminiClient)
 	if err != nil {
 		log.Printf("Failed to save user message: %v", err)
 	}
@@ -286,7 +286,7 @@ func (s *Server) handleThreadMessage(ev interface{}) {
 	}
 
 	// Save assistant message
-	err = s.firestoreClient.AddMessage(ctx, threadTs, "model", response, s.config.MaxRecentMessages)
+	err = s.firestoreClient.AddMessage(ctx, threadTs, "model", response, s.config.MaxRecentMessages, s.geminiClient)
 	if err != nil {
 		log.Printf("Failed to save response: %v", err)
 	}

@@ -108,6 +108,50 @@ func (g *GeminiClient) StartLecture(ctx context.Context, topic string) (string, 
 	return result.Candidates[0].Content.Parts[0].Text, nil
 }
 
+// SummarizeMessages summarizes old messages for context compression
+func (g *GeminiClient) SummarizeMessages(ctx context.Context, topic string, messages []Message) (string, error) {
+	if len(messages) == 0 {
+		return "", nil
+	}
+
+	// メッセージ履歴を構築
+	var messageText strings.Builder
+	for _, msg := range messages {
+		role := "学習者"
+		if msg.Role == "model" {
+			role = "教師"
+		}
+		messageText.WriteString(fmt.Sprintf("%s: %s\n", role, msg.Content))
+	}
+
+	prompt := fmt.Sprintf(`以下は「%s」に関する学習セッションの会話履歴です。
+この会話を簡潔に要約してください。要約は後続の会話で文脈を理解するために使用されます。
+
+## 会話履歴
+%s
+
+## 要約の要件
+- 主要なポイントと学習内容を簡潔にまとめる
+- 200文字以内で要約する
+- 学習者の理解度や進捗状況を含める`, topic, messageText.String())
+
+	var result *genai.GenerateContentResponse
+	err := retryWithExponentialBackoff(ctx, 5, func() error {
+		var genErr error
+		result, genErr = g.client.Models.GenerateContent(ctx, g.modelName, genai.Text(prompt), nil)
+		return genErr
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to generate summary: %v", err)
+	}
+
+	if len(result.Candidates) == 0 || len(result.Candidates[0].Content.Parts) == 0 {
+		return "", fmt.Errorf("no summary generated")
+	}
+
+	return result.Candidates[0].Content.Parts[0].Text, nil
+}
+
 // ContinueLecture continues the conversation based on history
 func (g *GeminiClient) ContinueLecture(ctx context.Context, topic, summary string, recentMessages []Message, userMessage string) (string, error) {
 	// 会話履歴を構築
