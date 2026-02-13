@@ -18,10 +18,10 @@ import (
 )
 
 type Server struct {
-	config         *config.Config
-	slackClient    *slack.Client
+	config          *config.Config
+	slackClient     *slack.Client
 	firestoreClient *FirestoreClient
-	geminiClient   *GeminiClient
+	aiClient        AIClient
 }
 
 func main() {
@@ -42,16 +42,30 @@ func main() {
 	}
 	defer firestoreClient.Close()
 
-	geminiClient, err := NewGeminiClient(ctx, conf.ProjectID, conf.Location, conf.ModelName)
-	if err != nil {
-		log.Fatalf("Failed to create Gemini client: %v", err)
+	// Initialize AI client based on provider
+	var aiClient AIClient
+	switch conf.AIProvider {
+	case "claude":
+		log.Printf("Initializing Claude client with model: %s", conf.ModelName)
+		aiClient, err = NewClaudeClient(ctx, conf.ClaudeAPIKey, conf.ModelName)
+		if err != nil {
+			log.Fatalf("Failed to create Claude client: %v", err)
+		}
+	case "gemini":
+		fallthrough
+	default:
+		log.Printf("Initializing Gemini client with model: %s", conf.ModelName)
+		aiClient, err = NewGeminiClient(ctx, conf.ProjectID, conf.Location, conf.ModelName)
+		if err != nil {
+			log.Fatalf("Failed to create Gemini client: %v", err)
+		}
 	}
 
 	server := &Server{
-		config:         conf,
-		slackClient:    slackClient,
+		config:          conf,
+		slackClient:     slackClient,
 		firestoreClient: firestoreClient,
-		geminiClient:   geminiClient,
+		aiClient:        aiClient,
 	}
 
 	// Setup router
@@ -218,14 +232,14 @@ func (s *Server) startLearningSession(channel, messageTs, topic string) {
 	}
 
 	// Generate first lecture
-	lecture, err := s.geminiClient.StartLecture(ctx, topic)
+	lecture, err := s.aiClient.StartLecture(ctx, topic)
 	if err != nil {
 		log.Printf("Failed to start lecture: %v", err)
 		return
 	}
 
 	// Save to Firestore
-	err = s.firestoreClient.AddMessage(ctx, messageTs, "model", lecture, s.config.MaxRecentMessages, s.geminiClient)
+	err = s.firestoreClient.AddMessage(ctx, messageTs, "model", lecture, s.config.MaxRecentMessages, s.aiClient)
 	if err != nil {
 		log.Printf("Failed to save message: %v", err)
 	}
@@ -280,20 +294,20 @@ func (s *Server) handleThreadMessage(ev interface{}) {
 	}
 
 	// Save user message
-	err = s.firestoreClient.AddMessage(ctx, threadTs, "user", userMessage, s.config.MaxRecentMessages, s.geminiClient)
+	err = s.firestoreClient.AddMessage(ctx, threadTs, "user", userMessage, s.config.MaxRecentMessages, s.aiClient)
 	if err != nil {
 		log.Printf("Failed to save user message: %v", err)
 	}
 
 	// Generate response
-	response, err := s.geminiClient.ContinueLecture(ctx, thread.Topic, summary, recentMessages, userMessage)
+	response, err := s.aiClient.ContinueLecture(ctx, thread.Topic, summary, recentMessages, userMessage)
 	if err != nil {
 		log.Printf("Failed to continue lecture: %v", err)
 		return
 	}
 
 	// Save assistant message
-	err = s.firestoreClient.AddMessage(ctx, threadTs, "model", response, s.config.MaxRecentMessages, s.geminiClient)
+	err = s.firestoreClient.AddMessage(ctx, threadTs, "model", response, s.config.MaxRecentMessages, s.aiClient)
 	if err != nil {
 		log.Printf("Failed to save response: %v", err)
 	}

@@ -7,7 +7,9 @@ type Config struct {
 	SlackSigningSecret string `envconfig:"SLACK_SIGNING_SECRET" required:"true"`
 	ProjectID          string `envconfig:"PROJECT_ID" required:"true"` // Vertex AI & Firestore用
 	Location           string `envconfig:"LOCATION" default:"global"`
-	ModelName          string `envconfig:"GEMINI_MODEL" default:"gemini-3-flash-preview"`
+	AIProvider         string `envconfig:"AI_PROVIDER" default:"gemini"`      // "gemini" or "claude"
+	ModelName          string `envconfig:"MODEL_NAME" default:"gemini-3-flash-preview"` // Model name for the selected provider
+	ClaudeAPIKey       string `envconfig:"CLAUDE_API_KEY"`                     // Claude API key (required if AI_PROVIDER=claude)
 	Port               string `envconfig:"PORT" default:"8080"`
 	MaxRecentMessages  int    `envconfig:"MAX_RECENT_MESSAGES" default:"10"` // 詳細保持する最新メッセージ数
 }

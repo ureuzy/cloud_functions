@@ -70,7 +70,7 @@ func (f *FirestoreClient) CreateThread(ctx context.Context, threadTs, topic stri
 }
 
 // AddMessage adds a message to the thread
-func (f *FirestoreClient) AddMessage(ctx context.Context, threadTs string, role, content string, maxRecentMessages int, geminiClient *GeminiClient) error {
+func (f *FirestoreClient) AddMessage(ctx context.Context, threadTs string, role, content string, maxRecentMessages int, aiClient AIClient) error {
 	docRef := f.client.Collection("ai_sensei_threads").Doc(threadTs)
 
 	// まずトランザクション外でスレッドデータを取得
@@ -99,9 +99,9 @@ func (f *FirestoreClient) AddMessage(ctx context.Context, threadTs string, role,
 		numToRemove := len(thread.RecentMessages) - maxRecentMessages
 		oldMessages := thread.RecentMessages[:numToRemove]
 
-		// Geminiで要約生成（トランザクション外で実行）
-		if geminiClient != nil {
-			newSummary, err := geminiClient.SummarizeMessages(ctx, thread.Topic, oldMessages)
+		// AIで要約生成（トランザクション外で実行）
+		if aiClient != nil {
+			newSummary, err := aiClient.SummarizeMessages(ctx, thread.Topic, oldMessages)
 			if err != nil {
 				// 要約失敗時はログを出して続行（古いメッセージは削除）
 				fmt.Printf("Failed to summarize messages: %v\n", err)
