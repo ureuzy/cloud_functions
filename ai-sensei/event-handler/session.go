@@ -119,7 +119,11 @@ func (s *Server) handleThreadMessage(ev interface{}) {
 		err = s.firestoreClient.MarkStepCompleted(ctx, threadTs, thread.CurrentStep)
 		if err != nil {
 			log.Printf("Failed to mark step as completed: %v", err)
+		} else {
+			log.Printf("Successfully marked step %d as completed and advanced to step %d", thread.CurrentStep, thread.CurrentStep+1)
 		}
+	} else {
+		log.Printf("No step completion detected in response (looking for step %d completion)", thread.CurrentStep)
 	}
 
 	// Save assistant message

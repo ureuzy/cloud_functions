@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -182,30 +183,47 @@ func (f *FirestoreClient) MarkStepCompleted(ctx context.Context, threadTs string
 	return f.client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
 		doc, err := tx.Get(docRef)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get document in transaction: %w", err)
 		}
 
 		var thread ConversationThread
 		if err := doc.DataTo(&thread); err != nil {
-			return err
+			return fmt.Errorf("failed to parse thread data: %w", err)
 		}
 
+		log.Printf("[MarkStepCompleted] Before update - CurrentStep: %d, AgendaItems count: %d", thread.CurrentStep, len(thread.AgendaItems))
+
 		// Mark the step as completed
+		found := false
 		for i := range thread.AgendaItems {
 			if thread.AgendaItems[i].StepNumber == stepNumber {
 				thread.AgendaItems[i].Completed = true
+				found = true
+				log.Printf("[MarkStepCompleted] Marked step %d (%s) as completed", stepNumber, thread.AgendaItems[i].Description)
 				break
 			}
+		}
+
+		if !found {
+			log.Printf("[MarkStepCompleted] WARNING: Step %d not found in agenda items", stepNumber)
 		}
 
 		// Advance to next step if exists
 		if stepNumber < len(thread.AgendaItems) {
 			thread.CurrentStep = stepNumber + 1
+			log.Printf("[MarkStepCompleted] Advanced CurrentStep from %d to %d", stepNumber, thread.CurrentStep)
+		} else {
+			log.Printf("[MarkStepCompleted] Not advancing CurrentStep - already at last step (%d >= %d)", stepNumber, len(thread.AgendaItems))
 		}
 
 		thread.UpdatedAt = time.Now()
 
-		return tx.Set(docRef, thread)
+		if err := tx.Set(docRef, thread); err != nil {
+			return fmt.Errorf("failed to save thread in transaction: %w", err)
+		}
+
+		log.Printf("[MarkStepCompleted] Successfully saved - new CurrentStep: %d", thread.CurrentStep)
+		return nil
 	})
 }
 
