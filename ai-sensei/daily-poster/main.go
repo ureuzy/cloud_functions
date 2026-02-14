@@ -67,7 +67,7 @@ func main() {
 	}
 
 	// 選定したトピックをFirestoreに保存
-	err = firestoreClient.SaveLesson(ctx, topic.Topic)
+	err = firestoreClient.SaveLesson(ctx, topic.Topic, topic.Description)
 	if err != nil {
 		log.Printf("Warning: Failed to save lesson to Firestore: %v", err)
 	}

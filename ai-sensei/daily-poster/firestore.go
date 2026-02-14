@@ -10,8 +10,9 @@ import (
 )
 
 type LessonHistory struct {
-	Date  time.Time `firestore:"date"`
-	Topic string    `firestore:"topic"`
+	Date        time.Time `firestore:"date"`
+	Topic       string    `firestore:"topic"`
+	Description string    `firestore:"description"`
 }
 
 type FirestoreClient struct {
@@ -62,10 +63,11 @@ func (f *FirestoreClient) GetRecentLessons(ctx context.Context, days int) ([]Les
 }
 
 // SaveLesson saves a new lesson to Firestore
-func (f *FirestoreClient) SaveLesson(ctx context.Context, topic string) error {
+func (f *FirestoreClient) SaveLesson(ctx context.Context, topic, description string) error {
 	lesson := LessonHistory{
-		Date:  time.Now(),
-		Topic: topic,
+		Date:        time.Now(),
+		Topic:       topic,
+		Description: description,
 	}
 
 	_, _, err := f.client.Collection("ai_sensei_lessons").Add(ctx, lesson)

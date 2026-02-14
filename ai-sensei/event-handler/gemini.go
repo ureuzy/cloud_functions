@@ -60,8 +60,8 @@ func retryWithExponentialBackoff(ctx context.Context, maxRetries int, fn func() 
 }
 
 // StartLecture generates the first lecture message for a topic
-func (g *GeminiClient) StartLecture(ctx context.Context, topic string) (string, error) {
-	prompt := buildStartLecturePrompt(topic)
+func (g *GeminiClient) StartLecture(ctx context.Context, topic, description string) (string, error) {
+	prompt := buildStartLecturePrompt(topic, description)
 
 	var result *genai.GenerateContentResponse
 	err := retryWithExponentialBackoff(ctx, 5, func() error {
@@ -106,8 +106,8 @@ func (g *GeminiClient) SummarizeMessages(ctx context.Context, topic string, mess
 }
 
 // ContinueLecture continues the conversation based on history
-func (g *GeminiClient) ContinueLecture(ctx context.Context, topic, summary string, recentMessages []Message, userMessage string) (string, error) {
-	prompt := buildContinueLecturePrompt(topic, summary, recentMessages, userMessage)
+func (g *GeminiClient) ContinueLecture(ctx context.Context, topic string, agendaItems []AgendaItem, currentStep int, summary string, recentMessages []Message, userMessage string) (string, error) {
+	prompt := buildContinueLecturePrompt(topic, agendaItems, currentStep, summary, recentMessages, userMessage)
 
 	var result *genai.GenerateContentResponse
 	err := retryWithExponentialBackoff(ctx, 5, func() error {

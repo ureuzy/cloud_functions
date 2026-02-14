@@ -26,8 +26,8 @@ func NewClaudeClient(ctx context.Context, apiKey, modelName string) (*ClaudeClie
 }
 
 // StartLecture generates the first lecture message for a topic
-func (c *ClaudeClient) StartLecture(ctx context.Context, topic string) (string, error) {
-	prompt := buildStartLecturePrompt(topic)
+func (c *ClaudeClient) StartLecture(ctx context.Context, topic, description string) (string, error) {
+	prompt := buildStartLecturePrompt(topic, description)
 
 	message, err := c.client.Messages.New(ctx, anthropic.MessageNewParams{
 		Model:     anthropic.Model(c.modelName),
@@ -90,8 +90,8 @@ func (c *ClaudeClient) SummarizeMessages(ctx context.Context, topic string, mess
 }
 
 // ContinueLecture continues the conversation based on history
-func (c *ClaudeClient) ContinueLecture(ctx context.Context, topic, summary string, recentMessages []Message, userMessage string) (string, error) {
-	prompt := buildContinueLecturePrompt(topic, summary, recentMessages, userMessage)
+func (c *ClaudeClient) ContinueLecture(ctx context.Context, topic string, agendaItems []AgendaItem, currentStep int, summary string, recentMessages []Message, userMessage string) (string, error) {
+	prompt := buildContinueLecturePrompt(topic, agendaItems, currentStep, summary, recentMessages, userMessage)
 
 	message, err := c.client.Messages.New(ctx, anthropic.MessageNewParams{
 		Model:     anthropic.Model(c.modelName),
