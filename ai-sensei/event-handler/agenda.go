@@ -7,9 +7,23 @@ import (
 
 // detectStepCompletion checks if the AI response contains a step completion signal
 func detectStepCompletion(response string, currentStep int) bool {
-	// Look for the completion pattern: "✅ ステップXが完了しました！"
-	completionPattern := fmt.Sprintf("✅ ステップ%dが完了しました", currentStep)
-	return strings.Contains(response, completionPattern)
+	// Slack太字マーカー(*) を除去してからパターンマッチ
+	cleaned := strings.ReplaceAll(response, "*", "")
+	stepStr := fmt.Sprintf("%d", currentStep)
+
+	patterns := []string{
+		fmt.Sprintf("ステップ%sが完了しました", stepStr),
+		fmt.Sprintf("ステップ%sが完了", stepStr),
+		fmt.Sprintf("ステップ%s完了", stepStr),
+	}
+
+	for _, pattern := range patterns {
+		if strings.Contains(cleaned, pattern) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // extractAgenda extracts the agenda section from the lecture text and returns structured items
