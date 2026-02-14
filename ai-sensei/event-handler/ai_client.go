@@ -13,5 +13,6 @@ type AIClient interface {
 	ContinueLecture(ctx context.Context, topic string, agendaItems []AgendaItem, currentStep int, summary string, recentMessages []Message, userMessage string) (string, error)
 
 	// SummarizeMessages summarizes old messages for context compression
-	SummarizeMessages(ctx context.Context, topic string, messages []Message) (string, error)
+	// existingSummary: if not empty, consolidate with new messages into a single summary
+	SummarizeMessages(ctx context.Context, topic string, messages []Message, existingSummary string) (string, error)
 }

@@ -80,6 +80,23 @@ func (f *FirestoreClient) CreateThread(ctx context.Context, threadTs, topic, des
 	return err
 }
 
+// shouldSummarize checks if messages have enough content to be worth summarizing
+func shouldSummarize(messages []Message) bool {
+	if len(messages) == 0 {
+		return false
+	}
+
+	// 全メッセージの総文字数をカウント
+	totalChars := 0
+	for _, msg := range messages {
+		totalChars += len(msg.Content)
+	}
+
+	// 平均文字数が10文字以上なら要約する価値あり
+	avgChars := totalChars / len(messages)
+	return avgChars >= 10
+}
+
 // AddMessage adds a message to the thread
 func (f *FirestoreClient) AddMessage(ctx context.Context, threadTs string, role, content string, maxRecentMessages int, aiClient AIClient) error {
 	docRef := f.client.Collection("ai_sensei_threads").Doc(threadTs)
@@ -111,19 +128,19 @@ func (f *FirestoreClient) AddMessage(ctx context.Context, threadTs string, role,
 		oldMessages := thread.RecentMessages[:numToRemove]
 
 		// AIで要約生成（トランザクション外で実行）
-		if aiClient != nil {
-			newSummary, err := aiClient.SummarizeMessages(ctx, thread.Topic, oldMessages)
+		if aiClient != nil && shouldSummarize(oldMessages) {
+			// 既存の要約と新しいメッセージを統合して要約
+			consolidatedSummary, err := aiClient.SummarizeMessages(ctx, thread.Topic, oldMessages, thread.Summary)
 			if err != nil {
 				// 要約失敗時はログを出して続行（古いメッセージは削除）
-				fmt.Printf("Failed to summarize messages: %v\n", err)
+				log.Printf("Failed to summarize messages: %v", err)
 			} else {
-				// 既存の要約と新しい要約を結合
-				if thread.Summary == "" {
-					thread.Summary = newSummary
-				} else {
-					thread.Summary = thread.Summary + "\n\n" + newSummary
-				}
+				// 統合要約で上書き（連結ではなく置き換え）
+				thread.Summary = consolidatedSummary
+				log.Printf("Successfully consolidated summary with %d new messages", len(oldMessages))
 			}
+		} else {
+			log.Printf("Skipping summarization - insufficient content in %d messages", len(oldMessages))
 		}
 
 		// 古いメッセージを削除

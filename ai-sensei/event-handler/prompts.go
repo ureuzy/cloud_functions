@@ -64,7 +64,7 @@ func buildStartLecturePrompt(topic, description string) string {
 }
 
 // buildSummarizePrompt generates the prompt for summarizing messages
-func buildSummarizePrompt(topic string, messages []Message) string {
+func buildSummarizePrompt(topic string, messages []Message, existingSummary string) string {
 	// メッセージ履歴を構築
 	var messageText strings.Builder
 	for _, msg := range messages {
@@ -75,6 +75,26 @@ func buildSummarizePrompt(topic string, messages []Message) string {
 		messageText.WriteString(fmt.Sprintf("%s: %s\n", role, msg.Content))
 	}
 
+	if existingSummary != "" {
+		// 既存の要約がある場合は統合要約を生成
+		return fmt.Sprintf(`以下は「%s」に関する学習セッションです。
+既存の要約と新しい会話履歴を統合して、1つの簡潔な要約を作成してください。
+
+## 既存の要約
+%s
+
+## 新しい会話履歴
+%s
+
+## 要約の要件
+- 既存の要約と新しい会話を統合し、重複を避けて1つの要約にまとめる
+- 主要なポイントと学習内容を簡潔にまとめる
+- 200文字以内で要約する
+- 学習者の理解度や進捗状況を含める
+- 時系列順に整理する`, topic, existingSummary, messageText.String())
+	}
+
+	// 初回の要約生成
 	return fmt.Sprintf(`以下は「%s」に関する学習セッションの会話履歴です。
 この会話を簡潔に要約してください。要約は後続の会話で文脈を理解するために使用されます。
 
