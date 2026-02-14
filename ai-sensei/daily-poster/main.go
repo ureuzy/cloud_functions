@@ -102,18 +102,81 @@ func selectDailyTopic(ctx context.Context, client *genai.Client, modelName strin
 - 実践的な演習が可能なこと
 
 ## トピック例（多様なカテゴリから1つ選定。あくまで例なので関連しそうな技術であればOKです）
-- 認証・認可: OIDC, SAML, mTLS, OAuth 2.0 フロー, JWT, Keycloak
-- コンテナ技術: Linux Namespace, cgroups, overlay filesystem, OCI Image仕様, runc
-- ネットワーク: DNS の詳細動作, HTTP/3, QUIC, BGP, VXLAN, iptables, eBPF XDP
-- セキュリティ: TLS 1.3 ハンドシェイク, 暗号化アルゴリズム, PKI, Vault, RBAC
-- プロトコル: gRPC ストリーミング, WebSocket, Server-Sent Events, MQTT
-- 可観測性: OpenTelemetry, eBPF, Prometheus, Grafana Loki, Distributed Tracing
-- CI/CD: Tekton Pipeline, ArgoCD Sync, GitOps, GitHub Actions, Spinnaker
-- Kubernetes: CNI プラグイン, Admission Webhook, Custom Scheduler, CRD, Operator Pattern
-- ストレージ: CSI ドライバ, etcd の RAFT, Distributed Consensus, Ceph, MinIO
-- クラウド: AWS IAM Policy, GCP Service Account, Terraform State, CloudFormation
-- データベース: PostgreSQL WAL, MySQL Replication, Redis Cluster, CockroachDB
-- メッセージング: Kafka Partition, RabbitMQ Clustering, Pub/Sub, NATS JetStream
+- 認証・認可: 
+  - プロトコル: OIDC, SAML, mTLS, OAuth 2.0 Flow, JWT, FIDO2/WebAuthn, SPIFFE/SPIRE
+  - 認可モデル: RBAC, ABAC, ReBAC (Relationship-Based), Cedar, Rego (OPA)
+  - 実装: Keycloak, Auth0, Zitadel, Ory Kratos/Keto, Dex, Identity Federation
+
+- ネットワーク: 
+  - プロトコル: DNS, HTTP/3, QUIC, BGP, VXLAN, Anycast, SR-IOV, DPDK, Segment Routing
+  - パケット処理: iptables, NFTables, eBPF XDP, TC (Traffic Control), Maglev Hashing
+  - 接続性: Service Mesh (Istio, Linkerd), Ambient Mesh, Tailscale/WireGuard, Ingress Controller
+
+- セキュリティ: 
+  - 暗号化: TLS 1.3, AES-GCM, ChaCha20-Poly1305, PKI, KMS (Envelope Encryption)
+  - 秘密管理: Vault, External Secrets Operator, Secret Rotation, TPM (Trusted Platform Module)
+  - サプライチェーン: SBOM (CycloneDX/SPDX), Sigstore (Cosign), SLSA Framework, Vulnerability Scanning
+
+- コンテナ技術:
+  - 分離技術: Linux Namespace, cgroups, Seccomp, AppArmor, LSM (Linux Security Modules)
+  - ファイルシステム: OverlayFS, ZFS, btrfs, Snapshot/Clone, Content-addressable storage
+  - ランタイム: runc, containerd, CRI-O, Firecracker (MicroVM), gVisor, Wasm/WASI
+
+- プロトコル:
+  - 通信形式: gRPC (Streaming), WebSocket, SSE, MQTT, WebTransport, Apache Arrow (Flight)
+  - データ構造: Protocol Buffers, Avro, MessagePack, FlatBuffers, CloudEvents
+  - APIゲートウェイ: Envoy, Kong, Tyk, Backend for Frontends (BFF)
+
+- 可観測性:
+  - テレメトリ: OpenTelemetry, Continuous Profiling (Parca/pyroscope), eBPF Monitoring
+  - メトリクス・ログ: Prometheus, Grafana Loki, VictoriaMetrics, ClickHouse (Log Storage)
+  - トレース: Distributed Tracing (Jaeger, Tempo), Tail-based Sampling, Service Dependency Maps
+
+- CI/CD:
+  - GitOps: ArgoCD Sync, Flux v2, Progressive Delivery (Flagger), Drift Detection
+  - パイプライン: Tekton, GitHub Actions, Dagger, CUE (Configuration Language)
+  - IaC: Terraform State, Pulumi, Crossplane, CDK8s, KusionStack
+
+- Kubernetes:
+  - 内部構造: etcd RAFT, Admission Webhook, Custom Scheduler, Controller Runtime, Client-go
+  - 拡張: CRD, Operator Pattern, API Aggregation Layer, Virtual Kubelet, Vcluster
+  - 自動化: CNI (Cilium, Calico), CSI, Karpenter, Vertical Pod Autoscaler (VPA)
+
+- ストレージ:
+  - 分散ストレージ: Ceph, MinIO, Rook, Longhorn, OpenEBS, HDFS
+  - プロトコル/HW: CSI Driver, NVMe-oF, iSCSI, S3 API, POSIX Compliance
+  - 理論/構造: LSM-Tree, B-Tree, WAL (Write Ahead Log), Page Cache, Direct I/O
+
+- データベース
+  - リレーショナル: PostgreSQL WAL, MySQL Replication, CockroachDB, TiDB, YugabyteDB
+  - NoSQL/NewSQL: Redis Cluster, Cassandra, ScyllaDB, MongoDB Sharding, DynamoDB
+  - 特殊用途: Vector DB (Milvus, Weaviate), Graph DB (Neo4j), Time Series (InfluxDB)
+
+- メッセージング・イベント駆動
+  - ブローカー: Kafka Partition, RabbitMQ Clustering, NATS JetStream, Apache Pulsar, Google Pub/Sub
+  - パターン: Event Sourcing, CQRS, Transactional Outbox, Competing Consumers
+  - 処理/統合: Kafka Connect, Kafka Streams, Apache Flink, Debezium (CDC)
+
+- AWS (Amazon Web Services)
+  - Identity: IAM Role/Policy, IAM Roles Anywhere, Organizations (SCP), Permission Boundary
+  - Networking: VPC, Transit Gateway, PrivateLink, Global Accelerator, CloudFront
+  - Computing: EC2, Lambda, Fargate, Karpenter (EKS), Nitro System
+  - Storage: S3 (Standard/Intelligent-Tiering), EBS, EFS, FSx for Lustre/NetApp ONTAP
+  - Governance: Control Tower, Config, CloudTrail, GuardDuty, CloudFormation
+
+- Google Cloud
+  - Identity: Cloud IAM, Service Account, Workload Identity Federation, Identity-Aware Proxy (IAP)
+  - Networking: Shared VPC, Cloud Armor, Cloud Interconnect, Private Service Connect, Cloud CDN
+  - Computing: Compute Engine, Cloud Run, GKE (Autopilot/Standard), Cloud Functions
+  - Storage: Cloud Storage, Persistent Disk, Filestore, Hyperdisk
+  - Governance: Organization Policy, Resource Manager, Service Usage, Cloud Deployment Manager
+
+- Microsoft Azure
+  - Identity: Microsoft Entra ID (Azure AD), Managed Identity, Conditional Access, Azure RBAC
+  - Networking: VNet, ExpressRoute, Virtual WAN, Azure Front Door, Private Link
+  - Computing: Azure VMs, Azure Container Apps, AKS (Azure Kubernetes Service), Azure Functions
+  - Storage: Blob Storage, Azure Files, Managed Disks, Blob Fuse
+  - Governance: Azure Policy, Management Groups, Blueprints, Bicep (IaC), Azure Resource Manager (ARM)  
 
 ## 出力形式
 {
