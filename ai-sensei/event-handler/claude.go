@@ -90,8 +90,8 @@ func (c *ClaudeClient) SummarizeMessages(ctx context.Context, topic string, mess
 }
 
 // ContinueLecture continues the conversation based on history
-func (c *ClaudeClient) ContinueLecture(ctx context.Context, topic string, agendaItems []AgendaItem, currentStep int, summary string, recentMessages []Message, userMessage string) (string, error) {
-	prompt := buildContinueLecturePrompt(topic, agendaItems, currentStep, summary, recentMessages, userMessage)
+func (c *ClaudeClient) ContinueLecture(ctx context.Context, topic string, agendaItems []AgendaItem, currentStep int, workspaceContext string, summary string, recentMessages []Message, userMessage string) (string, error) {
+	prompt := buildContinueLecturePrompt(topic, agendaItems, currentStep, workspaceContext, summary, recentMessages, userMessage)
 
 	message, err := c.client.Messages.New(ctx, anthropic.MessageNewParams{
 		Model:     anthropic.Model(c.modelName),
@@ -109,6 +109,35 @@ func (c *ClaudeClient) ContinueLecture(ctx context.Context, topic string, agenda
 	}
 
 	// Extract text from content blocks
+	var result strings.Builder
+	for _, block := range message.Content {
+		if block.Type == "text" {
+			result.WriteString(block.Text)
+		}
+	}
+
+	return result.String(), nil
+}
+
+// ExtractWorkspaceContext extracts workspace state from AI response
+func (c *ClaudeClient) ExtractWorkspaceContext(ctx context.Context, topic string, aiResponse string, existingContext string) (string, error) {
+	prompt := buildExtractWorkspaceContextPrompt(topic, aiResponse, existingContext)
+
+	message, err := c.client.Messages.New(ctx, anthropic.MessageNewParams{
+		Model:     anthropic.Model(c.modelName),
+		MaxTokens: 512,
+		Messages: []anthropic.MessageParam{
+			anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),
+		},
+	})
+	if err != nil {
+		return existingContext, fmt.Errorf("failed to extract workspace context: %w", err)
+	}
+
+	if len(message.Content) == 0 {
+		return existingContext, fmt.Errorf("no workspace context generated")
+	}
+
 	var result strings.Builder
 	for _, block := range message.Content {
 		if block.Type == "text" {

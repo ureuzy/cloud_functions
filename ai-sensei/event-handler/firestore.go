@@ -22,15 +22,16 @@ type AgendaItem struct {
 }
 
 type ConversationThread struct {
-	ThreadTs       string        `firestore:"thread_ts"`
-	Topic          string        `firestore:"topic"`
-	Description    string        `firestore:"description"`     // トピックの概要説明
-	AgendaItems    []AgendaItem  `firestore:"agenda_items"`    // 講義のアジェンダ（構造化）
-	CurrentStep    int           `firestore:"current_step"`    // 現在のステップ番号（1-indexed）
-	Summary        string        `firestore:"summary"`         // 古い会話の要約
-	RecentMessages []Message     `firestore:"recent_messages"` // 最新N件の詳細メッセージ
-	CreatedAt      time.Time     `firestore:"created_at"`
-	UpdatedAt      time.Time     `firestore:"updated_at"`
+	ThreadTs         string        `firestore:"thread_ts"`
+	Topic            string        `firestore:"topic"`
+	Description      string        `firestore:"description"`       // トピックの概要説明
+	AgendaItems      []AgendaItem  `firestore:"agenda_items"`      // 講義のアジェンダ（構造化）
+	CurrentStep      int           `firestore:"current_step"`      // 現在のステップ番号（1-indexed）
+	Summary          string        `firestore:"summary"`           // 古い会話の要約
+	WorkspaceContext string        `firestore:"workspace_context"` // 作業ディレクトリ・ファイル・コマンド等の状態
+	RecentMessages   []Message     `firestore:"recent_messages"`   // 最新N件の詳細メッセージ
+	CreatedAt        time.Time     `firestore:"created_at"`
+	UpdatedAt        time.Time     `firestore:"updated_at"`
 }
 
 type FirestoreClient struct {
@@ -169,6 +170,15 @@ func (f *FirestoreClient) GetConversationHistory(ctx context.Context, threadTs s
 func (f *FirestoreClient) UpdateSummary(ctx context.Context, threadTs, summary string) error {
 	_, err := f.client.Collection("ai_sensei_threads").Doc(threadTs).Update(ctx, []firestore.Update{
 		{Path: "summary", Value: summary},
+		{Path: "updated_at", Value: time.Now()},
+	})
+	return err
+}
+
+// UpdateWorkspaceContext updates the workspace context (working directory, created files, etc.)
+func (f *FirestoreClient) UpdateWorkspaceContext(ctx context.Context, threadTs, workspaceContext string) error {
+	_, err := f.client.Collection("ai_sensei_threads").Doc(threadTs).Update(ctx, []firestore.Update{
+		{Path: "workspace_context", Value: workspaceContext},
 		{Path: "updated_at", Value: time.Now()},
 	})
 	return err

@@ -51,6 +51,22 @@ func (s *Server) startLearningSession(channel, messageTs, topic string) {
 		log.Printf("Failed to save message: %v", err)
 	}
 
+	// Extract workspace context from initial lecture (background)
+	go func() {
+		wsCtx, wsErr := s.aiClient.ExtractWorkspaceContext(ctx, topic, lecture, "")
+		if wsErr != nil {
+			log.Printf("Failed to extract workspace context: %v", wsErr)
+			return
+		}
+		if wsCtx != "" {
+			if wsErr := s.firestoreClient.UpdateWorkspaceContext(ctx, messageTs, wsCtx); wsErr != nil {
+				log.Printf("Failed to save workspace context: %v", wsErr)
+			} else {
+				log.Printf("Successfully saved initial workspace context")
+			}
+		}
+	}()
+
 	// Post to Slack thread
 	_, _, err = s.slackClient.PostMessage(
 		channel,
@@ -107,7 +123,7 @@ func (s *Server) handleThreadMessage(ev interface{}) {
 	}
 
 	// Generate response with structured agenda and current step
-	response, err := s.aiClient.ContinueLecture(ctx, thread.Topic, thread.AgendaItems, thread.CurrentStep, summary, recentMessages, userMessage)
+	response, err := s.aiClient.ContinueLecture(ctx, thread.Topic, thread.AgendaItems, thread.CurrentStep, thread.WorkspaceContext, summary, recentMessages, userMessage)
 	if err != nil {
 		log.Printf("Failed to continue lecture: %v", err)
 		return
@@ -141,6 +157,22 @@ func (s *Server) handleThreadMessage(ev interface{}) {
 	if err != nil {
 		log.Printf("Failed to post response: %v", err)
 	}
+
+	// Extract workspace context from AI response (background)
+	go func() {
+		wsCtx, wsErr := s.aiClient.ExtractWorkspaceContext(ctx, thread.Topic, response, thread.WorkspaceContext)
+		if wsErr != nil {
+			log.Printf("Failed to extract workspace context: %v", wsErr)
+			return
+		}
+		if wsCtx != "" {
+			if wsErr := s.firestoreClient.UpdateWorkspaceContext(ctx, threadTs, wsCtx); wsErr != nil {
+				log.Printf("Failed to save workspace context: %v", wsErr)
+			} else {
+				log.Printf("Successfully updated workspace context")
+			}
+		}
+	}()
 
 	// Add delay to respect rate limits
 	time.Sleep(time.Second * 1)

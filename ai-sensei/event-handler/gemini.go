@@ -106,8 +106,8 @@ func (g *GeminiClient) SummarizeMessages(ctx context.Context, topic string, mess
 }
 
 // ContinueLecture continues the conversation based on history
-func (g *GeminiClient) ContinueLecture(ctx context.Context, topic string, agendaItems []AgendaItem, currentStep int, summary string, recentMessages []Message, userMessage string) (string, error) {
-	prompt := buildContinueLecturePrompt(topic, agendaItems, currentStep, summary, recentMessages, userMessage)
+func (g *GeminiClient) ContinueLecture(ctx context.Context, topic string, agendaItems []AgendaItem, currentStep int, workspaceContext string, summary string, recentMessages []Message, userMessage string) (string, error) {
+	prompt := buildContinueLecturePrompt(topic, agendaItems, currentStep, workspaceContext, summary, recentMessages, userMessage)
 
 	var result *genai.GenerateContentResponse
 	err := retryWithExponentialBackoff(ctx, 5, func() error {
@@ -121,6 +121,27 @@ func (g *GeminiClient) ContinueLecture(ctx context.Context, topic string, agenda
 
 	if len(result.Candidates) == 0 || len(result.Candidates[0].Content.Parts) == 0 {
 		return "", fmt.Errorf("no content generated")
+	}
+
+	return result.Candidates[0].Content.Parts[0].Text, nil
+}
+
+// ExtractWorkspaceContext extracts workspace state from AI response
+func (g *GeminiClient) ExtractWorkspaceContext(ctx context.Context, topic string, aiResponse string, existingContext string) (string, error) {
+	prompt := buildExtractWorkspaceContextPrompt(topic, aiResponse, existingContext)
+
+	var result *genai.GenerateContentResponse
+	err := retryWithExponentialBackoff(ctx, 3, func() error {
+		var genErr error
+		result, genErr = g.client.Models.GenerateContent(ctx, g.modelName, genai.Text(prompt), nil)
+		return genErr
+	})
+	if err != nil {
+		return existingContext, fmt.Errorf("failed to extract workspace context: %v", err)
+	}
+
+	if len(result.Candidates) == 0 || len(result.Candidates[0].Content.Parts) == 0 {
+		return existingContext, fmt.Errorf("no workspace context generated")
 	}
 
 	return result.Candidates[0].Content.Parts[0].Text, nil

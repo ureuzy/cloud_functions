@@ -89,8 +89,9 @@ func buildSummarizePrompt(topic string, messages []Message, existingSummary stri
 ## 要約の要件
 - 既存の要約と新しい会話を統合し、重複を避けて1つの要約にまとめる
 - 主要なポイントと学習内容を簡潔にまとめる
-- 200文字以内で要約する
+- 400文字以内で要約する
 - 学習者の理解度や進捗状況を含める
+- ファイル名、ディレクトリパス、コマンド等の具体的な技術情報は省略せず含める
 - 時系列順に整理する`, topic, existingSummary, messageText.String())
 	}
 
@@ -103,12 +104,13 @@ func buildSummarizePrompt(topic string, messages []Message, existingSummary stri
 
 ## 要約の要件
 - 主要なポイントと学習内容を簡潔にまとめる
-- 200文字以内で要約する
-- 学習者の理解度や進捗状況を含める`, topic, messageText.String())
+- 400文字以内で要約する
+- 学習者の理解度や進捗状況を含める
+- ファイル名、ディレクトリパス、コマンド等の具体的な技術情報は省略せず含める`, topic, messageText.String())
 }
 
 // buildContinueLecturePrompt generates the prompt for continuing the lecture
-func buildContinueLecturePrompt(topic string, agendaItems []AgendaItem, currentStep int, summary string, recentMessages []Message, userMessage string) string {
+func buildContinueLecturePrompt(topic string, agendaItems []AgendaItem, currentStep int, workspaceContext string, summary string, recentMessages []Message, userMessage string) string {
 	// 会話履歴を構築
 	var conversationHistory strings.Builder
 
@@ -153,6 +155,11 @@ func buildContinueLecturePrompt(topic string, agendaItems []AgendaItem, currentS
 		}
 	}
 
+	// ワークスペース状態がある場合は追加
+	if workspaceContext != "" {
+		conversationHistory.WriteString(fmt.Sprintf("## 現在の作業状態\n%s\n\n", workspaceContext))
+	}
+
 	// 要約がある場合は追加
 	if summary != "" {
 		conversationHistory.WriteString(fmt.Sprintf("## これまでの会話の要約\n%s\n\n", summary))
@@ -175,4 +182,33 @@ func buildContinueLecturePrompt(topic string, agendaItems []AgendaItem, currentS
 	conversationHistory.WriteString("あなた（教師）の返答:")
 
 	return conversationHistory.String()
+}
+
+// buildExtractWorkspaceContextPrompt generates the prompt for extracting workspace state from AI response
+func buildExtractWorkspaceContextPrompt(topic, aiResponse, existingContext string) string {
+	contextSection := ""
+	if existingContext != "" {
+		contextSection = fmt.Sprintf(`## 既存の作業状態
+%s
+
+`, existingContext)
+	}
+
+	return fmt.Sprintf(`以下は「%s」に関する学習セッションでの教師の応答です。
+この応答から、学習者の作業状態（作業ディレクトリ、作成したファイル、実行したコマンドなど）を抽出してください。
+
+%s## 教師の応答
+%s
+
+## 抽出の要件
+- 既存の作業状態がある場合は、新しい情報を統合して更新する
+- 以下の情報を含める（該当するものだけ）:
+  - 作業ディレクトリ
+  - 作成・編集したファイルとそのパス
+  - 実行したコマンド（重要なもののみ）
+  - インストールしたパッケージやツール
+  - 設定した環境変数や設定値
+- 500文字以内で簡潔にまとめる
+- 新しい情報がない場合は既存の作業状態をそのまま返す
+- 箇条書き形式で整理する`, topic, contextSection, aiResponse)
 }
