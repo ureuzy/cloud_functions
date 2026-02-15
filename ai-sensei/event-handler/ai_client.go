@@ -14,7 +14,7 @@ type AIClient interface {
 
 	// SummarizeMessages summarizes old messages for context compression
 	// existingSummary: if not empty, consolidate with new messages into a single summary
-	SummarizeMessages(ctx context.Context, topic string, messages []Message, existingSummary string) (string, error)
+	SummarizeMessages(ctx context.Context, topic string, messages []Message, existingSummary string, agendaItems []AgendaItem, currentStep int) (string, error)
 
 	// ExtractWorkspaceContext extracts workspace state (working dir, files, commands) from AI response
 	ExtractWorkspaceContext(ctx context.Context, topic string, aiResponse string, existingContext string) (string, error)

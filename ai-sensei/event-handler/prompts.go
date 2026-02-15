@@ -64,7 +64,7 @@ func buildStartLecturePrompt(topic, description string) string {
 }
 
 // buildSummarizePrompt generates the prompt for summarizing messages
-func buildSummarizePrompt(topic string, messages []Message, existingSummary string) string {
+func buildSummarizePrompt(topic string, messages []Message, existingSummary string, agendaItems []AgendaItem, currentStep int) string {
 	// メッセージ履歴を構築
 	var messageText strings.Builder
 	for _, msg := range messages {
@@ -73,6 +73,22 @@ func buildSummarizePrompt(topic string, messages []Message, existingSummary stri
 			role = "教師"
 		}
 		messageText.WriteString(fmt.Sprintf("%s: %s\n", role, msg.Content))
+	}
+
+	// アジェンダ進捗情報を構築
+	var progressText strings.Builder
+	if len(agendaItems) > 0 {
+		progressText.WriteString("\n## 現在の講義進捗\n")
+		for _, item := range agendaItems {
+			status := "未着手"
+			if item.Completed {
+				status = "完了"
+			} else if item.StepNumber == currentStep {
+				status = "進行中"
+			}
+			progressText.WriteString(fmt.Sprintf("- ステップ%d: %s（%s）\n", item.StepNumber, item.Description, status))
+		}
+		progressText.WriteString(fmt.Sprintf("現在のステップ: %d / %d\n", currentStep, len(agendaItems)))
 	}
 
 	if existingSummary != "" {
@@ -85,14 +101,14 @@ func buildSummarizePrompt(topic string, messages []Message, existingSummary stri
 
 ## 新しい会話履歴
 %s
-
+%s
 ## 要約の要件
 - 既存の要約と新しい会話を統合し、重複を避けて1つの要約にまとめる
 - 主要なポイントと学習内容を簡潔にまとめる
 - 400文字以内で要約する
-- 学習者の理解度や進捗状況を含める
+- 現在の進捗状況（どのステップまで完了し、今どのステップを進行中か）を必ず含める
 - ファイル名、ディレクトリパス、コマンド等の具体的な技術情報は省略せず含める
-- 時系列順に整理する`, topic, existingSummary, messageText.String())
+- 時系列順に整理する`, topic, existingSummary, messageText.String(), progressText.String())
 	}
 
 	// 初回の要約生成
@@ -101,12 +117,12 @@ func buildSummarizePrompt(topic string, messages []Message, existingSummary stri
 
 ## 会話履歴
 %s
-
+%s
 ## 要約の要件
 - 主要なポイントと学習内容を簡潔にまとめる
 - 400文字以内で要約する
-- 学習者の理解度や進捗状況を含める
-- ファイル名、ディレクトリパス、コマンド等の具体的な技術情報は省略せず含める`, topic, messageText.String())
+- 現在の進捗状況（どのステップまで完了し、今どのステップを進行中か）を必ず含める
+- ファイル名、ディレクトリパス、コマンド等の具体的な技術情報は省略せず含める`, topic, messageText.String(), progressText.String())
 }
 
 // buildContinueLecturePrompt generates the prompt for continuing the lecture

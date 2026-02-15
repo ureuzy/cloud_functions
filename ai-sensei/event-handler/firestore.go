@@ -131,7 +131,7 @@ func (f *FirestoreClient) AddMessage(ctx context.Context, threadTs string, role,
 		// AIで要約生成（トランザクション外で実行）
 		if aiClient != nil && shouldSummarize(oldMessages) {
 			// 既存の要約と新しいメッセージを統合して要約
-			consolidatedSummary, err := aiClient.SummarizeMessages(ctx, thread.Topic, oldMessages, thread.Summary)
+			consolidatedSummary, err := aiClient.SummarizeMessages(ctx, thread.Topic, oldMessages, thread.Summary, thread.AgendaItems, thread.CurrentStep)
 			if err != nil {
 				// 要約失敗時はログを出して続行（古いメッセージは削除）
 				log.Printf("Failed to summarize messages: %v", err)

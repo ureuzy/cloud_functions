@@ -56,12 +56,12 @@ func (c *ClaudeClient) StartLecture(ctx context.Context, topic, description stri
 }
 
 // SummarizeMessages summarizes old messages for context compression
-func (c *ClaudeClient) SummarizeMessages(ctx context.Context, topic string, messages []Message, existingSummary string) (string, error) {
+func (c *ClaudeClient) SummarizeMessages(ctx context.Context, topic string, messages []Message, existingSummary string, agendaItems []AgendaItem, currentStep int) (string, error) {
 	if len(messages) == 0 {
 		return "", nil
 	}
 
-	prompt := buildSummarizePrompt(topic, messages, existingSummary)
+	prompt := buildSummarizePrompt(topic, messages, existingSummary, agendaItems, currentStep)
 
 	message, err := c.client.Messages.New(ctx, anthropic.MessageNewParams{
 		Model:     anthropic.Model(c.modelName),
