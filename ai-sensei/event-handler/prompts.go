@@ -211,7 +211,7 @@ func buildExtractWorkspaceContextPrompt(topic, aiResponse, existingContext strin
 	}
 
 	return fmt.Sprintf(`以下は「%s」に関する学習セッションでの教師の応答です。
-この応答から、学習者の作業状態（作業ディレクトリ、作成したファイル、実行したコマンドなど）を抽出してください。
+この応答から、学習者の作業状態（作業ディレクトリ、作成したファイル、実行したコマンドなど）を抽出して以下の出力テンプレート形式にしてください。
 
 %s## 教師の応答
 %s
@@ -221,10 +221,32 @@ func buildExtractWorkspaceContextPrompt(topic, aiResponse, existingContext strin
 - 以下の情報を含める（該当するものだけ）:
   - 作業ディレクトリ
   - 作成・編集したファイルとそのパス
-  - 実行したコマンド（重要なもののみ）
+  - 実行したコマンド（重複するものは除外する）
   - インストールしたパッケージやツール
   - 設定した環境変数や設定値
-- 500文字以内で簡潔にまとめる
+- いらない情報は含めない
+  - 学習者の作業状態
+  - 学習者の理解度
+  - 学習ステップやアジェンダの進捗
+  - 学習概要
 - 新しい情報がない場合は既存の作業状態をそのまま返す
-- 箇条書き形式で整理する`, topic, contextSection, aiResponse)
+- 箇条書き形式で整理する
+
+## 出力テンプレート
+- 作業ディレクトリ: /path/to/directory
+- ファイル:
+  - path: "/path/to/file1"
+  - path: "/path/to/file2"
+- コマンド:
+  - ` + "`command1`" + `
+  - ` + "`command2`" + `
+- インストールしたパッケージ:
+  - name: package1
+	version: package version
+  - name: package2
+	version: package version
+- 設定した環境変数:
+  - ENV_VAR=value
+
+このテンプレートに従って、必要な情報を抽出して返してください。`, topic, contextSection, aiResponse)
 }
